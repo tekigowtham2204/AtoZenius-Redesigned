@@ -20,36 +20,42 @@ interface AboutPageProps {
 const learningSteps = [
   {
     step: '01',
+    phase: 'Enroll',
     title: 'Choose Your Course',
     desc: 'Pick a structured track across IT, Pharma & Healthcare, Non-IT & Management, or Agriculture.',
     icon: BookOpen,
   },
   {
     step: '02',
+    phase: 'Mentorship',
     title: 'Learn from Experts',
     desc: 'Train live with industry mentors who bring practical production experience to every session.',
     icon: Users,
   },
   {
     step: '03',
+    phase: 'Execution',
     title: 'Practice with Projects',
     desc: 'Apply concepts immediately through 3 minor projects and 2 real-world major capstones.',
     icon: Layers,
   },
   {
     step: '04',
+    phase: 'Credentials',
     title: 'Get Certified',
     desc: 'Earn Course Completion and Internship Completion certificates backed by verifiable project work.',
     icon: Award,
   },
   {
     step: '05',
+    phase: 'Experience',
     title: 'Complete Internships',
     desc: 'Gain practical exposure through guided internship workflows and mentor reviews.',
     icon: Target,
   },
   {
     step: '06',
+    phase: 'Outcome',
     title: 'Build Your Career',
     desc: 'Unlock placement support, mock interviews, and direct introductions to hiring teams.',
     icon: Briefcase,
@@ -172,24 +178,83 @@ const AboutPage: React.FC<AboutPageProps> = ({ onNavigate, onOpenAuth }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {learningSteps.map((item) => {
+            {learningSteps.map((item, idx) => {
               const Icon = item.icon;
+              const isFinalStep = idx === learningSteps.length - 1;
+              const progressWidth = `${Math.round(((idx + 1) / learningSteps.length) * 100)}%`;
+
               return (
-                <div
+                <article
                   key={item.step}
-                  className="bg-white rounded-[2rem] p-7 border border-brand-dark/5 shadow-sm hover:shadow-lg transition-shadow"
+                  className={`group rounded-[1.75rem] border overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 ${
+                    isFinalStep
+                      ? 'bg-[#0A0B0E] text-white border-[#0A0B0E] shadow-xl'
+                      : 'bg-white text-brand-dark border-brand-dark/10 hover:shadow-[0_20px_40px_-16px_rgba(5,5,5,0.1)]'
+                  }`}
                 >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="w-11 h-11 rounded-2xl bg-brand-secondary flex items-center justify-center text-brand-dark">
-                      <Icon size={20} />
-                    </div>
-                    <span className="text-xs font-mono font-bold text-brand-dark/35">
-                      STEP {item.step}
+                  {/* Top Numeral Plate */}
+                  <div
+                    className={`px-7 pt-6 pb-5 border-b flex items-start justify-between gap-4 ${
+                      isFinalStep
+                        ? 'border-white/10 bg-white/[0.03]'
+                        : 'border-brand-dark/10 bg-[#F7F4EE]'
+                    }`}
+                  >
+                    <span
+                      className={`text-4xl font-extrabold tracking-tighter leading-none ${
+                        isFinalStep ? 'text-brand-accent' : 'text-brand-dark'
+                      }`}
+                    >
+                      {item.step}
                     </span>
+
+                    <div
+                      className={`inline-flex items-center gap-2 text-xs font-mono ${
+                        isFinalStep ? 'text-white/60' : 'text-brand-dark/55'
+                      }`}
+                    >
+                      <span>{item.phase}</span>
+                      <Icon
+                        size={16}
+                        className={isFinalStep ? 'text-brand-accent' : 'text-brand-dark/70'}
+                      />
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-brand-dark mb-2">{item.title}</h3>
-                  <p className="text-sm text-brand-dark/65 leading-relaxed">{item.desc}</p>
-                </div>
+
+                  {/* Body Copy */}
+                  <div className="px-7 pt-6 pb-7 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3
+                        className={`text-xl font-bold tracking-tight mb-2.5 ${
+                          isFinalStep ? 'text-white' : 'text-brand-dark'
+                        }`}
+                      >
+                        {item.title}
+                      </h3>
+                      <p
+                        className={`text-[14px] leading-relaxed ${
+                          isFinalStep ? 'text-white/70' : 'text-brand-dark/70'
+                        }`}
+                      >
+                        {item.desc}
+                      </p>
+                    </div>
+
+                    {/* Architectural Progress Hairline */}
+                    <div className="mt-7 pt-4">
+                      <div
+                        className={`h-[2px] w-full rounded-full overflow-hidden ${
+                          isFinalStep ? 'bg-white/15' : 'bg-brand-dark/10'
+                        }`}
+                      >
+                        <div
+                          className="h-full bg-brand-accent transition-all duration-500"
+                          style={{ width: progressWidth }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </article>
               );
             })}
           </div>
