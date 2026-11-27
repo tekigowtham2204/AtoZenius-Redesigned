@@ -293,8 +293,9 @@ const CoursesPage: React.FC<CoursesPageProps> = ({ onOpenAuth }) => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 18, scale: 0.98 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-brand-cream rounded-[2rem] max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-10 shadow-2xl border border-brand-dark/10"
+              className="bg-brand-cream rounded-[2rem] max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-brand-dark/10"
             >
+              <div className="overflow-y-auto max-h-[90vh] p-6 sm:p-10 no-scrollbar">
               <div className="flex items-start justify-between gap-4 mb-6">
                 <div>
                   <span className="text-xs font-mono text-brand-accent font-semibold">
@@ -366,6 +367,7 @@ const CoursesPage: React.FC<CoursesPageProps> = ({ onOpenAuth }) => {
                 >
                   <MessageCircle size={16} /> Ask on WhatsApp
                 </a>
+              </div>
               </div>
             </motion.div>
           </motion.div>
