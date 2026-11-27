@@ -33,7 +33,7 @@ const ContentBlock: React.FC = () => {
                 </h2>
                 
                 <p className="text-base md:text-lg text-brand-dark/60 font-medium leading-relaxed max-w-md mb-8 md:mb-10">
-                  Breaking into tech shouldn't feel like guesswork. We connect structured courses, real-world mentorship, and direct career opportunities into a single flow.
+                  Breaking into your dream career shouldn't feel like guesswork. We connect structured courses, industry mentorship, and verified career opportunities into a single flow.
                 </p>
 
                 <div className="hidden lg:block">

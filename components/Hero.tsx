@@ -50,7 +50,7 @@ const Hero: React.FC<HeroProps> = ({ onOpenAuth, onNavigate, isInitial = false }
           transition={{ duration: animDuration, delay: delayOffset + (isInitial ? 0.4 : 0.1), ease: smoothEase }}
           className="text-base sm:text-lg md:text-xl text-brand-dark/70 max-w-xl md:max-w-2xl mx-auto mb-10 md:mb-16 font-medium leading-relaxed px-2"
         >
-          <span className="font-bold text-brand-dark">Courses. Mentors. Careers.</span> One continuous journey to break into tech—build real-world skills, get 1-on-1 guidance from industry operators, and step into your next role.
+          <span className="font-bold text-brand-dark">Learn Better. Achieve Faster.</span> Practical courses across IT, Pharma, Management &amp; Agriculture—backed by 1-on-1 industry mentors, internships, and career placement support.
         </motion.p>
 
         <motion.div

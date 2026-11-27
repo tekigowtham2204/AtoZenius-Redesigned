@@ -10,16 +10,16 @@ import AuthModal from './components/AuthModal';
 import CoursesPage from './components/CoursesPage';
 import MentorsPage from './components/MentorsPage';
 import CareersPage from './components/CareersPage';
+import AboutPage from './components/AboutPage';
+import CertificationsPage from './components/CertificationsPage';
+import BlogPage from './components/BlogPage';
+import ContactPage from './components/ContactPage';
+import PlacementsPage from './components/PlacementsPage';
+import CompanyCareersPage from './components/CompanyCareersPage';
 import InfoPage, { InfoPageType } from './components/InfoPage';
 import { ViewState } from './types';
 
 const infoViews: InfoPageType[] = [
-  'about',
-  'blog',
-  'contact',
-  'company-careers',
-  'certifications',
-  'placements',
   'faqs',
   'help-center',
   'refund-policy',
@@ -208,6 +208,48 @@ const App: React.FC = () => {
               <CareersPage
                 key="careers"
                 onOpenAuth={handleOpenAuth}
+              />
+            )}
+
+            {currentView === 'about' && (
+              <AboutPage
+                key="about"
+                onNavigate={navigateTo}
+                onOpenAuth={handleOpenAuth}
+              />
+            )}
+
+            {currentView === 'certifications' && (
+              <CertificationsPage
+                key="certifications"
+                onNavigate={navigateTo}
+                onOpenAuth={handleOpenAuth}
+              />
+            )}
+
+            {currentView === 'blog' && (
+              <BlogPage
+                key="blog"
+                onNavigate={navigateTo}
+              />
+            )}
+
+            {currentView === 'contact' && (
+              <ContactPage key="contact" />
+            )}
+
+            {currentView === 'placements' && (
+              <PlacementsPage
+                key="placements"
+                onNavigate={navigateTo}
+                onOpenAuth={handleOpenAuth}
+              />
+            )}
+
+            {currentView === 'company-careers' && (
+              <CompanyCareersPage
+                key="company-careers"
+                onNavigate={navigateTo}
               />
             )}
 

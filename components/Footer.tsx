@@ -30,7 +30,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </p>
             <div className="flex items-center space-x-3">
               <a
-                href="https://www.linkedin.com"
+                href="https://www.linkedin.com/showcase/atozenius/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="LinkedIn"
@@ -39,7 +39,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <Linkedin size={16} />
               </a>
               <a
-                href="https://www.youtube.com"
+                href="https://www.youtube.com/@AtoZenius"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="YouTube"
@@ -48,7 +48,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <Youtube size={16} />
               </a>
               <a
-                href="https://www.instagram.com"
+                href="https://www.instagram.com/atozenius"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"

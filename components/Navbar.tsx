@@ -21,37 +21,6 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenAuth, currentView = 'landing', on
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, target: string) => {
-    e.preventDefault();
-    
-    // If we are on a sub-page (like Learn), navigate back to landing first
-    if (currentView !== 'landing' && onNavigate) {
-      onNavigate('landing');
-      // Small timeout to allow render, then scroll
-      setTimeout(() => {
-        const element = document.querySelector(target);
-        if (element) element.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    } else {
-      // We are on landing, just scroll
-      const element = document.querySelector(target);
-      if (element) {
-        const offset = 100;
-        const bodyRect = document.body.getBoundingClientRect().top;
-        const elementRect = element.getBoundingClientRect().top;
-        const elementPosition = elementRect - bodyRect;
-        const offsetPosition = elementPosition - offset;
-
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        });
-      }
-    }
-    
-    setIsMobileMenuOpen(false);
-  };
-
   const navLinks: { name: string; href: string; view: ViewState }[] = [
     { name: 'Courses', href: '/courses', view: 'courses' },
     { name: 'Mentors', href: '/mentors', view: 'mentors' },

@@ -1,101 +1,99 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, DollarSign, ArrowRight, Zap, CheckCircle2, Building2 } from 'lucide-react';
+import { MapPin, Briefcase, ArrowRight, CheckCircle2, Building2, Award } from 'lucide-react';
 
 interface CareersPageProps {
   onOpenAuth: () => void;
 }
 
-interface JobRole {
+interface CareerOpportunity {
   id: string;
   title: string;
-  company: string;
+  domain: string;
   location: string;
-  type: 'Full-Time' | 'Internship' | 'Contract';
-  compensation: string;
-  matchScore: string;
+  type: 'Internship' | 'Full-Time' | 'Placement Track';
+  trackRequirement: string;
   skills: string[];
   description: string;
 }
 
-const rolesData: JobRole[] = [
+const rolesData: CareerOpportunity[] = [
   {
-    id: 'stripe-be',
-    title: 'Senior Backend Engineer',
-    company: 'Stripe',
-    location: 'Remote / San Francisco',
+    id: 'ai-fullstack-dev',
+    title: 'AI Full-Stack Developer',
+    domain: 'IT & Software Partners',
+    location: 'Bengaluru / Hyderabad / Remote',
     type: 'Full-Time',
-    compensation: '$210k - $275k',
-    matchScore: '98% Match',
-    skills: ['Go', 'Distributed Systems', 'PostgreSQL'],
-    description: 'Architect low-latency ledger and payment orchestration APIs serving global enterprise merchants.',
+    trackRequirement: 'AI Full-Stack or Python/Java Track',
+    skills: ['React', 'TypeScript', 'Python / Node.js', 'SQL'],
+    description:
+      'Build responsive web products and API integrations alongside engineering teams using skills proven in major capstone builds.',
   },
   {
-    id: 'vercel-fe',
-    title: 'Staff Frontend Engineer',
-    company: 'Vercel',
-    location: 'Remote',
+    id: 'medical-coder-trainee',
+    title: 'Certified Medical Coder (Trainee / Junior)',
+    domain: 'Healthcare & RCM Partners',
+    location: 'Hyderabad / Chennai / Remote',
     type: 'Full-Time',
-    compensation: '$195k - $250k',
-    matchScore: '96% Match',
-    skills: ['Next.js', 'TypeScript', 'React'],
-    description: 'Shape developer experience and build real-time deployment dashboards for millions of developers.',
+    trackRequirement: 'Advanced Medical Coding Track',
+    skills: ['ICD-10-CM', 'CPT', 'HCPCS', 'Clinical Audits'],
+    description:
+      'Review diagnostic and procedural patient documentation accurately for healthcare revenue-cycle and clinical operations teams.',
   },
   {
-    id: 'anthropic-ai',
-    title: 'Applied AI Engineer',
-    company: 'Anthropic',
-    location: 'San Francisco / Hybrid',
-    type: 'Full-Time',
-    compensation: '$240k - $320k',
-    matchScore: '95% Match',
-    skills: ['Python', 'PyTorch', 'Evaluation'],
-    description: 'Design agentic evaluation harnesses and scale reliable tool-use workflows for frontier models.',
-  },
-  {
-    id: 'linear-intern',
-    title: 'Product Engineering Intern',
-    company: 'Linear',
-    location: 'Remote',
+    id: 'python-intern',
+    title: 'Python Full-Stack Software Intern',
+    domain: 'Product Engineering Partners',
+    location: 'Remote / Hybrid',
     type: 'Internship',
-    compensation: '$65 / hr',
-    matchScore: '94% Match',
-    skills: ['TypeScript', 'GraphQL', 'UI Motion'],
-    description: 'Work alongside staff engineers shipping high-craft sync engine features and keyboard-first UI.',
+    trackRequirement: 'Python Full Stack & Internship Track',
+    skills: ['Python', 'Django', 'REST APIs', 'Frontend UI'],
+    description:
+      'Collaborate with engineering mentors on live feature tickets, API endpoints, and automated testing workflows.',
   },
   {
-    id: 'figma-sys',
-    title: 'Systems Infrastructure Contractor',
-    company: 'Figma',
-    location: 'Remote',
-    type: 'Contract',
-    compensation: '$140 / hr',
-    matchScore: '92% Match',
-    skills: ['Rust', 'WebAssembly', 'Kubernetes'],
-    description: 'Optimize real-time multiplayer state synchronization and container cold-start latency.',
+    id: 'data-analyst-associate',
+    title: 'Junior Data & Business Analyst',
+    domain: 'Analytics & Consulting Partners',
+    location: 'Bengaluru / Pune / Remote',
+    type: 'Placement Track',
+    trackRequirement: 'Data Science & Analytics Mastery',
+    skills: ['SQL', 'Python', 'Power BI', 'Excel'],
+    description:
+      'Clean operational datasets, create stakeholder KPI dashboards, and surface actionable growth insights.',
   },
   {
-    id: 'raycast-mac',
-    title: 'Full-Stack Developer',
-    company: 'Raycast',
-    location: 'Remote (EU/US)',
-    type: 'Full-Time',
-    compensation: '$170k - $210k',
-    matchScore: '93% Match',
-    skills: ['React', 'Node.js', 'APIs'],
-    description: 'Build cloud sync, team collaboration extensions, and AI command integrations.',
+    id: 'soc-cyber-intern',
+    title: 'Cyber Security & SOC Intern',
+    domain: 'Enterprise Security Partners',
+    location: 'Hyderabad / Remote',
+    type: 'Internship',
+    trackRequirement: 'Cyber Security Essentials',
+    skills: ['Linux', 'SIEM', 'Network Defense', 'VAPT'],
+    description:
+      'Assist security analysts with log triage, vulnerability scans, and endpoint hardening checklists.',
+  },
+  {
+    id: 'growth-marketing-exec',
+    title: 'Performance & Digital Marketing Associate',
+    domain: 'D2C & Growth Partners',
+    location: 'Remote / Hybrid',
+    type: 'Placement Track',
+    trackRequirement: 'Digital Marketing Pro',
+    skills: ['SEO', 'Google Ads', 'Meta Ads', 'GA4'],
+    description:
+      'Manage paid campaign funnels, keyword research, and conversion analytics for scaling digital brands.',
   },
 ];
 
-const jobTypes = ['All', 'Full-Time', 'Internship', 'Contract'] as const;
+const jobTypes = ['All', 'Internship', 'Full-Time', 'Placement Track'] as const;
 
 const CareersPage: React.FC<CareersPageProps> = ({ onOpenAuth }) => {
   const [selectedType, setSelectedType] = useState<(typeof jobTypes)[number]>('All');
   const [appliedIds, setAppliedIds] = useState<string[]>([]);
 
-  const filteredRoles = selectedType === 'All'
-    ? rolesData
-    : rolesData.filter((r) => r.type === selectedType);
+  const filteredRoles =
+    selectedType === 'All' ? rolesData : rolesData.filter((r) => r.type === selectedType);
 
   const handleApply = (id: string) => {
     if (!appliedIds.includes(id)) {
@@ -111,19 +109,19 @@ const CareersPage: React.FC<CareersPageProps> = ({ onOpenAuth }) => {
       exit={{ opacity: 0, transition: { duration: 0.15 } }}
       className="pt-28 md:pt-36 pb-24 min-h-screen bg-brand-cream"
     >
-      <section className="px-6 mb-14 md:mb-20">
+      <section className="px-6 mb-14 md:mb-16">
         <div className="container mx-auto max-w-6xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.45 }}
             className="max-w-3xl"
           >
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-brand-dark tracking-tighter leading-[1.05] mb-6">
-              Careers Matched to <span className="text-brand-accent">Proof.</span>
+              Internships &amp; Careers Built on <span className="text-brand-accent">Proof.</span>
             </h1>
             <p className="text-lg md:text-xl text-brand-dark/60 font-medium leading-relaxed">
-              Skip the resume black hole. Apply directly to vetted engineering, AI, and product roles where your verified Skill DNA gets you fast-tracked to hiring teams.
+              Move directly from mentor-reviewed minor and major projects into guaranteed internship pathways, mock interview prep, and hiring partner openings across IT, Healthcare, Management, and AgriTech.
             </p>
           </motion.div>
 
@@ -132,6 +130,7 @@ const CareersPage: React.FC<CareersPageProps> = ({ onOpenAuth }) => {
             {jobTypes.map((type) => (
               <button
                 key={type}
+                type="button"
                 onClick={() => setSelectedType(type)}
                 className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${
                   selectedType === type
@@ -155,37 +154,37 @@ const CareersPage: React.FC<CareersPageProps> = ({ onOpenAuth }) => {
             return (
               <motion.div
                 key={role.id}
-                initial={{ opacity: 0, y: 15 }}
+                initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: idx * 0.05 }}
+                transition={{ duration: 0.35, delay: idx * 0.04 }}
                 className="bg-white rounded-[2rem] p-6 md:p-8 border border-brand-dark/5 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col lg:flex-row lg:items-center justify-between gap-6"
               >
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-3 mb-3">
                     <span className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-dark bg-brand-secondary px-3 py-1 rounded-full">
-                      <Building2 size={13} /> {role.company}
+                      <Building2 size={13} /> {role.domain}
                     </span>
-                    <span className="text-xs font-bold text-brand-dark/60 bg-brand-cream px-3 py-1 rounded-full border border-brand-dark/5">
+                    <span className="text-xs font-bold text-brand-accent bg-brand-accent/10 px-3 py-1 rounded-full">
                       {role.type}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700 bg-green-50 px-3 py-1 rounded-full">
-                      <Zap size={12} /> {role.matchScore}
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-dark/60 bg-brand-cream px-3 py-1 rounded-full border border-brand-dark/5">
+                      <Award size={12} /> {role.trackRequirement}
                     </span>
                   </div>
 
-                  <h3 className="text-2xl font-bold text-brand-dark mb-2 tracking-tight">
+                  <h2 className="text-2xl font-bold text-brand-dark mb-2 tracking-tight">
                     {role.title}
-                  </h3>
+                  </h2>
                   <p className="text-brand-dark/65 text-sm leading-relaxed mb-4 max-w-2xl">
                     {role.description}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-brand-dark/50">
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-brand-dark/55">
                     <span className="flex items-center gap-1.5">
                       <MapPin size={14} /> {role.location}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <DollarSign size={14} /> {role.compensation}
+                      <Briefcase size={14} /> Project-Backed Screening
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {role.skills.map((skill) => (
@@ -202,6 +201,7 @@ const CareersPage: React.FC<CareersPageProps> = ({ onOpenAuth }) => {
 
                 <div className="lg:w-auto flex-shrink-0">
                   <button
+                    type="button"
                     onClick={() => handleApply(role.id)}
                     className={`w-full lg:w-auto px-8 py-4 rounded-full text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
                       isApplied
@@ -211,11 +211,11 @@ const CareersPage: React.FC<CareersPageProps> = ({ onOpenAuth }) => {
                   >
                     {isApplied ? (
                       <>
-                        <CheckCircle2 size={16} /> Applied
+                        <CheckCircle2 size={16} /> Interest Submitted
                       </>
                     ) : (
                       <>
-                        Apply Now <ArrowRight size={16} />
+                        Apply via Track <ArrowRight size={16} />
                       </>
                     )}
                   </button>
