@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Phone, MessageCircle, Mail, CheckCircle2, ChevronDown, Clock, MapPin } from 'lucide-react';
 import { coursesData } from '../data/courses';
+import { addAdmissionsLead } from '../data/portal';
 
 const contactFaqs = [
   {
@@ -38,6 +39,14 @@ const ContactPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    addAdmissionsLead({
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      program,
+      source: 'Contact Form',
+      notes: message.trim(),
+    });
     setSubmitted(true);
   };
 

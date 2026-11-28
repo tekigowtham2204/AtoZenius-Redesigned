@@ -21,11 +21,20 @@ import DashboardPage from './components/portal/DashboardPage';
 import NotesPage from './components/portal/NotesPage';
 import ProjectsPage from './components/portal/ProjectsPage';
 import CommunityPage from './components/portal/CommunityPage';
+import MentorDeskPage from './components/portal/mentor/MentorDeskPage';
+import MentorNotesPage from './components/portal/mentor/MentorNotesPage';
+import MentorReviewsPage from './components/portal/mentor/MentorReviewsPage';
+import MentorDoubtsPage from './components/portal/mentor/MentorDoubtsPage';
+import StaffOpsPage from './components/portal/staff/StaffOpsPage';
+import StaffBatchesPage from './components/portal/staff/StaffBatchesPage';
+import StaffAdmissionsPage from './components/portal/staff/StaffAdmissionsPage';
+import StaffPlacementsPage from './components/portal/staff/StaffPlacementsPage';
 import {
   getSavedSession,
+  PortalRole,
+  PortalSession,
   PortalTrackId,
   saveSession,
-  StudentSession,
 } from './data/portal';
 import { ViewState } from './types';
 
@@ -37,7 +46,25 @@ const infoViews: InfoPageType[] = [
   'terms',
 ];
 
-const portalViews: ViewState[] = ['dashboard', 'notes', 'projects', 'community'];
+const studentViews: ViewState[] = ['dashboard', 'notes', 'projects', 'community'];
+const mentorViews: ViewState[] = ['mentor-desk', 'mentor-notes', 'mentor-reviews', 'mentor-doubts'];
+const staffViews: ViewState[] = ['staff-ops', 'staff-batches', 'staff-admissions', 'staff-placements'];
+const allProtectedViews: ViewState[] = [...studentViews, ...mentorViews, ...staffViews];
+
+const roleHome = (role: PortalRole): ViewState => {
+  if (role === 'mentor') return 'mentor-desk';
+  if (role === 'staff') return 'staff-ops';
+  return 'dashboard';
+};
+
+const guardViewForSession = (requested: ViewState, session: PortalSession | null): ViewState => {
+  if (!allProtectedViews.includes(requested)) return requested;
+  if (!session) return 'auth';
+  if (session.role === 'student' && !studentViews.includes(requested)) return 'dashboard';
+  if (session.role === 'mentor' && !mentorViews.includes(requested)) return 'mentor-desk';
+  if (session.role === 'staff' && !staffViews.includes(requested)) return 'staff-ops';
+  return requested;
+};
 
 const BASE_PATH = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
@@ -66,6 +93,14 @@ const pathToView = (path: string): ViewState => {
   if (normalized === '/notes') return 'notes';
   if (normalized === '/projects') return 'projects';
   if (normalized === '/community') return 'community';
+  if (normalized === '/mentor') return 'mentor-desk';
+  if (normalized === '/mentor/notes') return 'mentor-notes';
+  if (normalized === '/mentor/reviews') return 'mentor-reviews';
+  if (normalized === '/mentor/doubts') return 'mentor-doubts';
+  if (normalized === '/staff') return 'staff-ops';
+  if (normalized === '/staff/batches') return 'staff-batches';
+  if (normalized === '/staff/admissions') return 'staff-admissions';
+  if (normalized === '/staff/placements') return 'staff-placements';
   return 'landing';
 };
 
@@ -91,6 +126,14 @@ const viewToPath = (view: ViewState): string => {
     case 'notes': route = '/notes'; break;
     case 'projects': route = '/projects'; break;
     case 'community': route = '/community'; break;
+    case 'mentor-desk': route = '/mentor'; break;
+    case 'mentor-notes': route = '/mentor/notes'; break;
+    case 'mentor-reviews': route = '/mentor/reviews'; break;
+    case 'mentor-doubts': route = '/mentor/doubts'; break;
+    case 'staff-ops': route = '/staff'; break;
+    case 'staff-batches': route = '/staff/batches'; break;
+    case 'staff-admissions': route = '/staff/admissions'; break;
+    case 'staff-placements': route = '/staff/placements'; break;
     case 'landing':
     default: route = '/'; break;
   }
@@ -118,10 +161,18 @@ const viewTitles: Record<ViewState, string> = {
   notes: 'Personalized Study Notes - AtoZenius',
   projects: 'Projects & Certificates - AtoZenius',
   community: 'Batch Community - AtoZenius',
+  'mentor-desk': 'Mentor Desk - AtoZenius',
+  'mentor-notes': 'Notes Studio - AtoZenius',
+  'mentor-reviews': 'Capstone Reviews - AtoZenius',
+  'mentor-doubts': 'Batch Doubt Queue - AtoZenius',
+  'staff-ops': 'Operations Hub - AtoZenius',
+  'staff-batches': 'Offline Batches - AtoZenius',
+  'staff-admissions': 'Admissions Pipeline - AtoZenius',
+  'staff-placements': 'Certificates & Placements - AtoZenius',
 };
 
 const App: React.FC = () => {
-  const [session, setSession] = useState<StudentSession | null>(() => {
+  const [session, setSession] = useState<PortalSession | null>(() => {
     if (typeof window !== 'undefined') {
       return getSavedSession();
     }
@@ -130,12 +181,7 @@ const App: React.FC = () => {
 
   const [currentView, setCurrentView] = useState<ViewState>(() => {
     if (typeof window !== 'undefined') {
-      const requested = pathToView(window.location.pathname);
-      const saved = getSavedSession();
-      if (portalViews.includes(requested) && !saved) {
-        return 'auth';
-      }
-      return requested;
+      return guardViewForSession(pathToView(window.location.pathname), getSavedSession());
     }
     return 'landing';
   });
@@ -148,19 +194,16 @@ const App: React.FC = () => {
   }, [currentView]);
 
   useEffect(() => {
-    const requested = pathToView(window.location.pathname);
-    const initialView =
-      portalViews.includes(requested) && !getSavedSession() ? 'auth' : requested;
+    const initialView = guardViewForSession(
+      pathToView(window.location.pathname),
+      getSavedSession()
+    );
     window.history.replaceState({ view: initialView }, '', viewToPath(initialView));
 
     const handlePopState = (event: PopStateEvent) => {
       const nextView: ViewState =
         event.state?.view || pathToView(window.location.pathname);
-      if (portalViews.includes(nextView) && !getSavedSession()) {
-        setCurrentView('auth');
-      } else {
-        setCurrentView(nextView);
-      }
+      setCurrentView(guardViewForSession(nextView, getSavedSession()));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -169,8 +212,7 @@ const App: React.FC = () => {
   }, []);
 
   const navigateTo = (view: ViewState) => {
-    const resolvedView =
-      portalViews.includes(view) && !session ? 'auth' : view;
+    const resolvedView = guardViewForSession(view, session);
     const targetPath = viewToPath(resolvedView);
     if (window.location.pathname !== targetPath) {
       window.history.pushState({ view: resolvedView }, '', targetPath);
@@ -180,25 +222,26 @@ const App: React.FC = () => {
   };
 
   const handleOpenAuth = () => {
-    navigateTo(session ? 'dashboard' : 'auth');
+    navigateTo(session ? roleHome(session.role) : 'auth');
   };
 
-  const handleLogin = (newSession: StudentSession) => {
+  const handleLogin = (newSession: PortalSession) => {
     saveSession(newSession);
     setSession(newSession);
     setActiveLectureId(null);
     setCommunityTopicPrefill(null);
-    const targetPath = viewToPath('dashboard');
+    const landingRoute = roleHome(newSession.role);
+    const targetPath = viewToPath(landingRoute);
     if (window.location.pathname !== targetPath) {
-      window.history.pushState({ view: 'dashboard' }, '', targetPath);
+      window.history.pushState({ view: landingRoute }, '', targetPath);
     }
-    setCurrentView('dashboard');
+    setCurrentView(landingRoute);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSwitchTrack = (trackId: PortalTrackId) => {
     if (!session) return;
-    const updated: StudentSession = { ...session, trackId };
+    const updated: PortalSession = { ...session, trackId };
     saveSession(updated);
     setSession(updated);
     setActiveLectureId(null);
@@ -273,7 +316,7 @@ const App: React.FC = () => {
                         onClick={handleOpenAuth}
                         className="px-10 md:px-12 py-4 md:py-5 bg-transparent border-2 border-brand-dark/15 text-brand-dark rounded-full font-bold text-sm uppercase tracking-widest hover:border-brand-dark/40 transition-all duration-300 w-full sm:w-auto"
                       >
-                        {session ? 'Open Portal' : 'Get Started'}
+                        {session ? 'Open Workspace' : 'Get Started'}
                       </button>
                     </div>
                   </div>
@@ -335,6 +378,7 @@ const App: React.FC = () => {
               />
             )}
 
+            {/* Student Portal Routes */}
             {currentView === 'dashboard' && session && (
               <DashboardPage
                 key="dashboard"
@@ -363,6 +407,61 @@ const App: React.FC = () => {
                 session={session}
                 prefillLecture={communityTopicPrefill}
               />
+            )}
+
+            {/* Mentor Portal Routes */}
+            {currentView === 'mentor-desk' && session && (
+              <MentorDeskPage
+                key="mentor-desk"
+                session={session}
+                onSelectTrack={handleSwitchTrack}
+                onNavigate={navigateTo}
+              />
+            )}
+
+            {currentView === 'mentor-notes' && session && (
+              <MentorNotesPage
+                key="mentor-notes"
+                session={session}
+                onSelectTrack={handleSwitchTrack}
+              />
+            )}
+
+            {currentView === 'mentor-reviews' && session && (
+              <MentorReviewsPage
+                key="mentor-reviews"
+                session={session}
+                onSelectTrack={handleSwitchTrack}
+              />
+            )}
+
+            {currentView === 'mentor-doubts' && session && (
+              <MentorDoubtsPage
+                key="mentor-doubts"
+                session={session}
+                onSelectTrack={handleSwitchTrack}
+              />
+            )}
+
+            {/* Staff Operations Routes */}
+            {currentView === 'staff-ops' && session && (
+              <StaffOpsPage
+                key="staff-ops"
+                session={session}
+                onNavigate={navigateTo}
+              />
+            )}
+
+            {currentView === 'staff-batches' && session && (
+              <StaffBatchesPage key="staff-batches" />
+            )}
+
+            {currentView === 'staff-admissions' && session && (
+              <StaffAdmissionsPage key="staff-admissions" />
+            )}
+
+            {currentView === 'staff-placements' && session && (
+              <StaffPlacementsPage key="staff-placements" />
             )}
 
             {infoViews.includes(currentView as InfoPageType) && (

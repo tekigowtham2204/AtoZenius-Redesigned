@@ -18,4 +18,12 @@ export type ViewState =
   | 'dashboard'
   | 'notes'
   | 'projects'
-  | 'community';
+  | 'community'
+  | 'mentor-desk'
+  | 'mentor-notes'
+  | 'mentor-reviews'
+  | 'mentor-doubts'
+  | 'staff-ops'
+  | 'staff-batches'
+  | 'staff-admissions'
+  | 'staff-placements';

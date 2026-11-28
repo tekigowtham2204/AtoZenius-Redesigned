@@ -2,23 +2,29 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, CheckCircle2, ExternalLink, Send } from 'lucide-react';
 import {
-  portalTracks,
+  getResolvedTrackData,
+  PortalSession,
+  ProjectReviewOverride,
+  ProjectSubmissionRecord,
   readStorage,
   STORAGE_KEYS,
-  StudentSession,
   writeStorage,
 } from '../../data/portal';
 
 interface ProjectsPageProps {
-  session: StudentSession;
+  session: PortalSession;
 }
 
 const ProjectsPage: React.FC<ProjectsPageProps> = ({ session }) => {
-  const track = portalTracks[session.trackId];
+  const track = getResolvedTrackData(session.trackId);
   const [submissions, setSubmissions] = useState<
-    Record<string, { url: string; submittedAt: string }>
+    Record<string, ProjectSubmissionRecord>
   >(() =>
-    readStorage<Record<string, { url: string; submittedAt: string }>>(STORAGE_KEYS.submissions, {})
+    readStorage<Record<string, ProjectSubmissionRecord>>(STORAGE_KEYS.submissions, {})
+  );
+  const reviews = readStorage<Record<string, ProjectReviewOverride>>(
+    STORAGE_KEYS.projectReviews,
+    {}
   );
   const [draftUrls, setDraftUrls] = useState<Record<string, string>>({});
   const [activeEditId, setActiveEditId] = useState<string | null>(null);
@@ -40,9 +46,11 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ session }) => {
     setActiveEditId(null);
   };
 
-  const reviewedOrSubmittedCount = track.projects.filter(
-    (p) => p.defaultStatus !== 'Not Started' || Boolean(submissions[p.id])
-  ).length;
+  const reviewedOrSubmittedCount = track.projects.filter((p) => {
+    const rev = reviews[p.id];
+    const effective = rev?.status || (submissions[p.id] ? 'Submitted' : p.defaultStatus);
+    return effective !== 'Not Started';
+  }).length;
 
   return (
     <motion.div
@@ -70,7 +78,10 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ session }) => {
         <div className="space-y-5 mb-12">
           {track.projects.map((proj) => {
             const customSub = submissions[proj.id];
-            const effectiveStatus = customSub ? 'Submitted' : proj.defaultStatus;
+            const reviewOverride = reviews[proj.id];
+            const effectiveStatus =
+              reviewOverride?.status || (customSub ? 'Submitted' : proj.defaultStatus);
+            const effectiveFeedback = reviewOverride?.feedback || proj.defaultFeedback;
             const isEditing = activeEditId === proj.id;
 
             const dotClass =
@@ -116,9 +127,9 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ session }) => {
                     </div>
                   </div>
 
-                  {proj.defaultFeedback && !customSub && (
+                  {effectiveFeedback && (
                     <div className="mt-4 p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900 leading-relaxed">
-                      <strong>Mentor Review:</strong> {proj.defaultFeedback}
+                      <strong>Mentor Review:</strong> {effectiveFeedback}
                     </div>
                   )}
 

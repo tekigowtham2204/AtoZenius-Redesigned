@@ -1,11 +1,16 @@
 export type PortalTrackId = 'ai-full-stack' | 'advanced-medical-coding' | 'data-science-analytics';
 
-export interface StudentSession {
+export type PortalRole = 'student' | 'mentor' | 'staff';
+
+export interface PortalSession {
   name: string;
   email: string;
   initials: string;
+  role: PortalRole;
   trackId: PortalTrackId;
 }
+
+export type StudentSession = PortalSession;
 
 export interface LectureNote {
   id: string;
@@ -72,6 +77,57 @@ export interface PortalTrackData {
   projects: PortalProject[];
   threads: CommunityThread[];
 }
+
+export interface BatchOverride {
+  branchLocation?: string;
+  nextSessionTime?: string;
+  nextSessionTopic?: string;
+  mentorName?: string;
+  whatsappGroupUrl?: string;
+}
+
+export interface LectureOverride {
+  summary?: string;
+  classHighlight?: string;
+}
+
+export interface ProjectSubmissionRecord {
+  url: string;
+  submittedAt: string;
+}
+
+export interface ProjectReviewOverride {
+  status: 'Not Started' | 'Submitted' | 'Reviewed';
+  feedback: string;
+  reviewedBy?: string;
+}
+
+export interface AdmissionsLead {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  program: string;
+  source: 'Contact Form' | 'Portal Signup' | 'Walk-In Counseling';
+  status: 'New' | 'Counseling' | 'Enrolled';
+  createdAt: string;
+  notes?: string;
+}
+
+export interface IssuedCertificate {
+  id: string;
+  studentName: string;
+  programTitle: string;
+  batchCode: string;
+  type: 'Course + Internship Completion';
+  issuedDate: string;
+}
+
+export const allTrackIds: PortalTrackId[] = [
+  'ai-full-stack',
+  'advanced-medical-coding',
+  'data-science-analytics',
+];
 
 export const portalTracks: Record<PortalTrackId, PortalTrackData> = {
   'ai-full-stack': {
@@ -660,7 +716,62 @@ export const portalTracks: Record<PortalTrackId, PortalTrackData> = {
   },
 };
 
-const STORAGE_KEYS = {
+const defaultLeads: AdmissionsLead[] = [
+  {
+    id: 'lead-seed-1',
+    name: 'Priya Darshini',
+    email: 'priya.d@example.com',
+    phone: '+91 9848011223',
+    program: 'Advanced Medical Coding',
+    source: 'Contact Form',
+    status: 'Counseling',
+    createdAt: 'Today · 9:40 AM',
+    notes: 'B.Pharm graduate looking for Ameerpet Lab 3 morning batch.',
+  },
+  {
+    id: 'lead-seed-2',
+    name: 'Harsha Vardhan',
+    email: 'harsha.v@example.com',
+    phone: '+91 9123456780',
+    program: 'AI Full-Stack Development',
+    source: 'Walk-In Counseling',
+    status: 'New',
+    createdAt: 'Yesterday · 4:15 PM',
+    notes: 'Final year CSE student requesting weekend/weekday schedule details.',
+  },
+  {
+    id: 'lead-seed-3',
+    name: 'Sneha Reddy',
+    email: 'sneha.r@example.com',
+    phone: '+91 9988776655',
+    program: 'Data Science & Analytics Mastery',
+    source: 'Portal Signup',
+    status: 'Enrolled',
+    createdAt: 'Nov 25',
+    notes: 'Enrolled in Batch #DS-11.',
+  },
+];
+
+const defaultIssuedCertificates: IssuedCertificate[] = [
+  {
+    id: 'ATZ-2026-8492',
+    studentName: 'Sample Learner Name',
+    programTitle: 'AI Full-Stack Development',
+    batchCode: 'Batch #FS-08',
+    type: 'Course + Internship Completion',
+    issuedDate: 'Nov 2026',
+  },
+  {
+    id: 'ATZ-2026-8510',
+    studentName: 'Mukul Chowdary',
+    programTitle: 'Advanced Medical Coding',
+    batchCode: 'Batch #MC-14',
+    type: 'Course + Internship Completion',
+    issuedDate: 'Nov 2026',
+  },
+];
+
+export const STORAGE_KEYS = {
   session: 'atozenius_portal_session_v1',
   bookmarks: 'atozenius_portal_bookmarks_v1',
   revised: 'atozenius_portal_revised_v1',
@@ -668,6 +779,12 @@ const STORAGE_KEYS = {
   submissions: 'atozenius_portal_submissions_v1',
   customThreads: 'atozenius_portal_custom_threads_v1',
   customReplies: 'atozenius_portal_custom_replies_v1',
+  batchOverrides: 'atozenius_portal_batch_overrides_v1',
+  lectureOverrides: 'atozenius_portal_lecture_overrides_v1',
+  customLectures: 'atozenius_portal_custom_lectures_v1',
+  projectReviews: 'atozenius_portal_project_reviews_v1',
+  leads: 'atozenius_portal_leads_v1',
+  issuedCertificates: 'atozenius_portal_certificates_v1',
 };
 
 export function readStorage<T>(key: string, fallback: T): T {
@@ -687,11 +804,19 @@ export function writeStorage<T>(key: string, value: T): void {
   }
 }
 
-export function getSavedSession(): StudentSession | null {
-  return readStorage<StudentSession | null>(STORAGE_KEYS.session, null);
+export function getSavedSession(): PortalSession | null {
+  const saved = readStorage<Partial<PortalSession> | null>(STORAGE_KEYS.session, null);
+  if (!saved || !saved.email || !saved.trackId) return null;
+  return {
+    name: saved.name || 'AtoZenius User',
+    email: saved.email,
+    initials: saved.initials || computeInitials(saved.name || 'AtoZenius'),
+    role: saved.role || 'student',
+    trackId: saved.trackId,
+  };
 }
 
-export function saveSession(session: StudentSession | null): void {
+export function saveSession(session: PortalSession | null): void {
   if (!session) {
     try {
       window.localStorage.removeItem(STORAGE_KEYS.session);
@@ -710,4 +835,186 @@ export function computeInitials(name: string): string {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-export { STORAGE_KEYS };
+export function detectRoleFromEmail(
+  email: string,
+  fallbackTrackId: PortalTrackId = 'ai-full-stack'
+): { role: PortalRole; trackId: PortalTrackId; suggestedName: string } {
+  const normalized = email.trim().toLowerCase();
+  const local = normalized.split('@')[0] || '';
+  const domain = normalized.split('@')[1] || '';
+
+  // Staff detection: @atozenius.com or staff/ops/admin/admissions prefix
+  if (
+    domain === 'atozenius.com' ||
+    /^(staff|ops|admin|admissions|placement)/.test(local)
+  ) {
+    return {
+      role: 'staff',
+      trackId: fallbackTrackId,
+      suggestedName: 'AtoZenius Operations Team',
+    };
+  }
+
+  // Mentor detection: mentor/faculty prefix or faculty email domain or known mentor names
+  if (
+    domain === 'faculty.atozenius.in' ||
+    /^(mentor|faculty|sairam|durga|turpati|ananya|aditya)/.test(local)
+  ) {
+    if (local.includes('sairam')) {
+      return {
+        role: 'mentor',
+        trackId: 'advanced-medical-coding',
+        suggestedName: 'Sairam Lankadasari',
+      };
+    }
+    if (local.includes('ananya')) {
+      return {
+        role: 'mentor',
+        trackId: 'data-science-analytics',
+        suggestedName: 'Ananya Deshmukh',
+      };
+    }
+    return {
+      role: 'mentor',
+      trackId: local.includes('durga') ? 'ai-full-stack' : fallbackTrackId,
+      suggestedName: 'Turpati Durga Prasad',
+    };
+  }
+
+  const formatted = local
+    .replace(/[._-]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return {
+    role: 'student',
+    trackId: fallbackTrackId,
+    suggestedName: formatted || 'AtoZenius Learner',
+  };
+}
+
+export function getResolvedTrackData(trackId: PortalTrackId): PortalTrackData {
+  const base = portalTracks[trackId];
+  const batchOverrides = readStorage<Record<string, BatchOverride>>(
+    STORAGE_KEYS.batchOverrides,
+    {}
+  );
+  const lectureOverrides = readStorage<Record<string, LectureOverride>>(
+    STORAGE_KEYS.lectureOverrides,
+    {}
+  );
+  const customLecturesMap = readStorage<Record<string, LectureNote[]>>(
+    STORAGE_KEYS.customLectures,
+    {}
+  );
+  const customThreadsMap = readStorage<Record<string, CommunityThread[]>>(
+    STORAGE_KEYS.customThreads,
+    {}
+  );
+  const customRepliesMap = readStorage<Record<string, CommunityReply[]>>(
+    STORAGE_KEYS.customReplies,
+    {}
+  );
+
+  const bOverride = batchOverrides[trackId] || {};
+  const mergedLectures = [
+    ...base.lectures.map((lec) => ({
+      ...lec,
+      ...(lectureOverrides[lec.id] || {}),
+    })),
+    ...(customLecturesMap[trackId] || []).map((lec) => ({
+      ...lec,
+      ...(lectureOverrides[lec.id] || {}),
+    })),
+  ];
+
+  const mergedThreads = [
+    ...(customThreadsMap[trackId] || []),
+    ...base.threads,
+  ].map((t) => ({
+    ...t,
+    replies: [...t.replies, ...(customRepliesMap[t.id] || [])],
+  }));
+
+  return {
+    ...base,
+    ...bOverride,
+    lectures: mergedLectures,
+    threads: mergedThreads,
+  };
+}
+
+export function postBatchThread(trackId: PortalTrackId, thread: CommunityThread): void {
+  const existing = readStorage<Record<string, CommunityThread[]>>(
+    STORAGE_KEYS.customThreads,
+    {}
+  );
+  writeStorage(STORAGE_KEYS.customThreads, {
+    ...existing,
+    [trackId]: [thread, ...(existing[trackId] || [])],
+  });
+}
+
+export function postBatchReply(threadId: string, reply: CommunityReply): void {
+  const existing = readStorage<Record<string, CommunityReply[]>>(
+    STORAGE_KEYS.customReplies,
+    {}
+  );
+  writeStorage(STORAGE_KEYS.customReplies, {
+    ...existing,
+    [threadId]: [...(existing[threadId] || []), reply],
+  });
+}
+
+export function getAdmissionsLeads(): AdmissionsLead[] {
+  const saved = readStorage<AdmissionsLead[] | null>(STORAGE_KEYS.leads, null);
+  return saved ?? defaultLeads;
+}
+
+export function addAdmissionsLead(
+  lead: Omit<AdmissionsLead, 'id' | 'status' | 'createdAt'>
+): void {
+  const current = getAdmissionsLeads();
+  const next: AdmissionsLead = {
+    ...lead,
+    id: `lead-${Date.now()}`,
+    status: 'New',
+    createdAt: 'Just now',
+  };
+  writeStorage(STORAGE_KEYS.leads, [next, ...current]);
+}
+
+export function updateAdmissionsLeadStatus(
+  id: string,
+  status: AdmissionsLead['status']
+): AdmissionsLead[] {
+  const updated = getAdmissionsLeads().map((l) => (l.id === id ? { ...l, status } : l));
+  writeStorage(STORAGE_KEYS.leads, updated);
+  return updated;
+}
+
+export function getIssuedCertificates(): IssuedCertificate[] {
+  const saved = readStorage<IssuedCertificate[] | null>(
+    STORAGE_KEYS.issuedCertificates,
+    null
+  );
+  return saved ?? defaultIssuedCertificates;
+}
+
+export function issueNewCertificate(
+  cert: Omit<IssuedCertificate, 'id' | 'issuedDate'>
+): IssuedCertificate {
+  const current = getIssuedCertificates();
+  const randomCode = Math.floor(1000 + Math.random() * 9000);
+  const created: IssuedCertificate = {
+    ...cert,
+    id: `ATZ-2026-${randomCode}`,
+    issuedDate: 'Nov 2026',
+  };
+  writeStorage(STORAGE_KEYS.issuedCertificates, [created, ...current]);
+  return created;
+}
+
+export function verifyCertificateById(id: string): IssuedCertificate | undefined {
+  const cleaned = id.trim().toUpperCase();
+  return getIssuedCertificates().find((c) => c.id.toUpperCase() === cleaned);
+}

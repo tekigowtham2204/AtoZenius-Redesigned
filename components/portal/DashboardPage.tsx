@@ -11,15 +11,17 @@ import {
   Bookmark,
 } from 'lucide-react';
 import {
-  portalTracks,
+  getResolvedTrackData,
+  PortalSession,
+  ProjectReviewOverride,
+  ProjectSubmissionRecord,
   readStorage,
   STORAGE_KEYS,
-  StudentSession,
 } from '../../data/portal';
 import { ViewState } from '../../types';
 
 interface DashboardPageProps {
-  session: StudentSession;
+  session: PortalSession;
   onNavigate: (view: ViewState) => void;
   onOpenLecture: (lectureId: string) => void;
 }
@@ -29,19 +31,25 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigate,
   onOpenLecture,
 }) => {
-  const track = portalTracks[session.trackId];
+  const track = getResolvedTrackData(session.trackId);
   const bookmarksMap = readStorage<Record<string, boolean>>(STORAGE_KEYS.bookmarks, {});
   const revisedMap = readStorage<Record<string, boolean>>(STORAGE_KEYS.revised, {});
-  const submissionsMap = readStorage<Record<string, { url: string; submittedAt: string }>>(
+  const submissionsMap = readStorage<Record<string, ProjectSubmissionRecord>>(
     STORAGE_KEYS.submissions,
+    {}
+  );
+  const reviewsMap = readStorage<Record<string, ProjectReviewOverride>>(
+    STORAGE_KEYS.projectReviews,
     {}
   );
 
   const revisedCount = track.lectures.filter((l) => revisedMap[l.id]).length;
   const bookmarkedLectures = track.lectures.filter((l) => bookmarksMap[l.id]);
-  const completedProjects = track.projects.filter(
-    (p) => p.defaultStatus !== 'Not Started' || Boolean(submissionsMap[p.id])
-  ).length;
+  const completedProjects = track.projects.filter((p) => {
+    const rev = reviewsMap[p.id];
+    const effective = rev?.status || (submissionsMap[p.id] ? 'Submitted' : p.defaultStatus);
+    return effective !== 'Not Started';
+  }).length;
   const pinnedThread = track.threads.find((t) => t.pinned) || track.threads[0];
 
   return (

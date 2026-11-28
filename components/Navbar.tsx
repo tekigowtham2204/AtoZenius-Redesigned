@@ -2,13 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronDown, LogOut, Award, BookOpen } from 'lucide-react';
 import { ViewState } from '../types';
-import { portalTracks, PortalTrackId, StudentSession } from '../data/portal';
+import {
+  getResolvedTrackData,
+  PortalRole,
+  PortalSession,
+  PortalTrackId,
+} from '../data/portal';
 
 interface NavbarProps {
   onOpenAuth: () => void;
   currentView?: ViewState;
   onNavigate?: (view: ViewState) => void;
-  session?: StudentSession | null;
+  session?: PortalSession | null;
   onSwitchTrack?: (trackId: PortalTrackId) => void;
   onLogout?: () => void;
 }
@@ -19,12 +24,32 @@ const publicNavLinks: { name: string; href: string; view: ViewState }[] = [
   { name: 'Careers', href: '/careers', view: 'careers' },
 ];
 
-const portalNavLinks: { name: string; href: string; view: ViewState }[] = [
-  { name: 'Dashboard', href: '/dashboard', view: 'dashboard' },
-  { name: 'My Notes', href: '/notes', view: 'notes' },
-  { name: 'Projects', href: '/projects', view: 'projects' },
-  { name: 'Community', href: '/community', view: 'community' },
-];
+const roleNavLinks: Record<PortalRole, { name: string; href: string; view: ViewState }[]> = {
+  student: [
+    { name: 'Dashboard', href: '/dashboard', view: 'dashboard' },
+    { name: 'My Notes', href: '/notes', view: 'notes' },
+    { name: 'Projects', href: '/projects', view: 'projects' },
+    { name: 'Community', href: '/community', view: 'community' },
+  ],
+  mentor: [
+    { name: 'Mentor Desk', href: '/mentor', view: 'mentor-desk' },
+    { name: 'Notes Studio', href: '/mentor/notes', view: 'mentor-notes' },
+    { name: 'Reviews', href: '/mentor/reviews', view: 'mentor-reviews' },
+    { name: 'Batch Doubts', href: '/mentor/doubts', view: 'mentor-doubts' },
+  ],
+  staff: [
+    { name: 'Ops Hub', href: '/staff', view: 'staff-ops' },
+    { name: 'Batches', href: '/staff/batches', view: 'staff-batches' },
+    { name: 'Admissions', href: '/staff/admissions', view: 'staff-admissions' },
+    { name: 'Placements', href: '/staff/placements', view: 'staff-placements' },
+  ],
+};
+
+const roleHomeRoute: Record<PortalRole, ViewState> = {
+  student: 'dashboard',
+  mentor: 'mentor-desk',
+  staff: 'staff-ops',
+};
 
 const trackSwitcherItems: { id: PortalTrackId; label: string }[] = [
   { id: 'ai-full-stack', label: 'AI Full-Stack (FS-08)' },
@@ -63,8 +88,15 @@ const Navbar: React.FC<NavbarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navLinks = session ? portalNavLinks : publicNavLinks;
-  const activeTrack = session ? portalTracks[session.trackId] : null;
+  const navLinks = session ? roleNavLinks[session.role] : publicNavLinks;
+  const activeTrack = session ? getResolvedTrackData(session.trackId) : null;
+  const roleBadge = session
+    ? session.role === 'staff'
+      ? 'AtoZenius Staff'
+      : session.role === 'mentor'
+      ? 'Faculty'
+      : activeTrack?.batchCode || ''
+    : '';
 
   return (
     <>
@@ -77,10 +109,10 @@ const Navbar: React.FC<NavbarProps> = ({
       >
         <div className="container mx-auto px-6 md:px-8 flex justify-between items-center">
           <a
-            href={session ? '/dashboard' : '/'}
+            href={session ? `/${roleHomeRoute[session.role]}` : '/'}
             onClick={(e) => {
               e.preventDefault();
-              if (onNavigate) onNavigate(session ? 'dashboard' : 'landing');
+              if (onNavigate) onNavigate(session ? roleHomeRoute[session.role] : 'landing');
             }}
             className="text-xl md:text-2xl font-bold tracking-tighter text-brand-dark relative group"
           >
@@ -88,7 +120,7 @@ const Navbar: React.FC<NavbarProps> = ({
           </a>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex space-x-9 items-center">
+          <div className="hidden md:flex space-x-8 lg:space-x-9 items-center">
             {navLinks.map((item) => (
               <a
                 key={item.name}
@@ -107,10 +139,10 @@ const Navbar: React.FC<NavbarProps> = ({
               </a>
             ))}
 
-            {session && activeTrack ? (
+            {session ? (
               <div className="relative flex items-center gap-3" ref={dropdownRef}>
                 <span className="hidden lg:inline-block text-xs font-mono text-brand-dark/55">
-                  {activeTrack.batchCode}
+                  {roleBadge}
                 </span>
 
                 <button
@@ -118,7 +150,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => setIsProfileOpen((prev) => !prev)}
                   className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white border border-brand-dark/10 hover:border-brand-dark/30 transition-colors shadow-sm"
                   aria-expanded={isProfileOpen}
-                  aria-label="Open student menu"
+                  aria-label="Open account menu"
                 >
                   <span className="w-7 h-7 rounded-full bg-brand-dark text-white text-xs font-bold flex items-center justify-center">
                     {session.initials}
@@ -146,12 +178,14 @@ const Navbar: React.FC<NavbarProps> = ({
                       <div className="pb-3 mb-3 border-b border-brand-dark/10">
                         <div className="text-sm font-bold text-brand-dark">{session.name}</div>
                         <div className="text-xs text-brand-dark/55 truncate">{session.email}</div>
-                        <div className="text-[11px] font-mono text-brand-accent mt-1">
-                          {activeTrack.courseTitle} · {activeTrack.batchCode}
+                        <div className="text-[11px] font-mono text-brand-accent mt-1 uppercase">
+                          {session.role === 'student' && activeTrack
+                            ? `${activeTrack.courseTitle} · ${activeTrack.batchCode}`
+                            : `${session.role} Workspace`}
                         </div>
                       </div>
 
-                      {onSwitchTrack && (
+                      {session.role === 'student' && onSwitchTrack && (
                         <div className="pb-3 mb-3 border-b border-brand-dark/10">
                           <div className="text-[10px] font-mono uppercase tracking-wider text-brand-dark/45 mb-2">
                             Switch Offline Batch (Demo)
@@ -258,10 +292,10 @@ const Navbar: React.FC<NavbarProps> = ({
               <X size={32} />
             </button>
 
-            {session && activeTrack && (
+            {session && (
               <div className="text-center pb-2">
-                <div className="text-xs font-mono text-brand-accent font-semibold">
-                  {activeTrack.batchCode}
+                <div className="text-xs font-mono text-brand-accent font-semibold uppercase">
+                  {roleBadge}
                 </div>
                 <div className="text-sm font-bold text-brand-dark">{session.name}</div>
               </div>
@@ -288,7 +322,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
             {session ? (
               <div className="flex flex-col items-center gap-4 pt-4">
-                {onSwitchTrack && (
+                {session.role === 'student' && onSwitchTrack && (
                   <div className="flex flex-wrap justify-center gap-2">
                     {trackSwitcherItems.map((item) => (
                       <button

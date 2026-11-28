@@ -3,15 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Mail, Lock, User, Check, MessageCircle } from 'lucide-react';
 import { ViewState } from '../types';
 import {
+  addAdmissionsLead,
   computeInitials,
+  detectRoleFromEmail,
+  PortalSession,
   portalTracks,
   PortalTrackId,
-  StudentSession,
 } from '../data/portal';
 
 interface AuthModalProps {
   onNavigate?: (view: ViewState) => void;
-  onLogin: (session: StudentSession) => void;
+  onLogin: (session: PortalSession) => void;
 }
 
 const trackOptions: { id: PortalTrackId; label: string; batch: string }[] = [
@@ -51,19 +53,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
       return;
     }
 
-    const derivedName =
-      fullName.trim() ||
-      email
-        .split('@')[0]
-        .replace(/[._-]+/g, ' ')
-        .replace(/\b\w/g, (c) => c.toUpperCase()) ||
-      'AtoZenius Learner';
+    const detected = detectRoleFromEmail(email, selectedTrack);
+    const resolvedName = fullName.trim() || detected.suggestedName;
+
+    if (!isLogin && detected.role === 'student') {
+      addAdmissionsLead({
+        name: resolvedName,
+        email: email.trim(),
+        phone: '+91 9502886626',
+        program: portalTracks[detected.trackId].courseTitle,
+        source: 'Portal Signup',
+        notes: `Self-registered for ${portalTracks[detected.trackId].batchCode}`,
+      });
+    }
 
     onLogin({
-      name: derivedName,
+      name: resolvedName,
       email: email.trim(),
-      initials: computeInitials(derivedName),
-      trackId: selectedTrack,
+      initials: computeInitials(resolvedName),
+      role: detected.role,
+      trackId: detected.trackId,
     });
   };
 
@@ -78,8 +87,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
       name,
       email: `${name.toLowerCase().replace(/\s+/g, '.')}@atozenius.in`,
       initials: computeInitials(name),
+      role: 'student',
       trackId,
     });
+  };
+
+  const handleAutofillRoleEmail = (sampleEmail: string) => {
+    setIsLogin(true);
+    setEmail(sampleEmail);
+    setPassword('atozenius-demo');
+    setErrorMessage(null);
   };
 
   const fadeVariants = {
@@ -128,7 +145,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
             {isLogin ? 'Learn Better. Achieve Faster.' : 'Begin your mentored career track.'}
           </h2>
           <p className="text-white/55 text-lg leading-relaxed">
-            Access personalized offline class notes, capstone milestones, batch Q&amp;A, and mentor updates inside your student companion portal.
+            Access personalized offline class notes, capstone milestones, batch Q&amp;A, and mentor updates inside one unified ecosystem.
           </p>
         </motion.div>
 
@@ -167,11 +184,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
               className="mb-7 text-center md:text-left"
             >
               <h1 className="text-3xl md:text-4xl font-bold text-brand-dark mb-2 tracking-tight">
-                {isLogin ? 'Student Sign In' : 'Create Account'}
+                {isLogin ? 'Sign In' : 'Create Account'}
               </h1>
               <p className="text-brand-dark/55 text-sm md:text-base">
                 {isLogin
-                  ? 'Enter your credentials or try an instant demo learner cohort below.'
+                  ? 'Enter your credentials or preview a student cohort below.'
                   : 'Enroll your details to enter the student companion portal.'}
               </p>
             </motion.div>
@@ -179,7 +196,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
             {/* Instant Demo Student Access */}
             <div className="mb-7 p-4 rounded-2xl bg-white border border-brand-dark/10">
               <div className="text-[11px] font-mono uppercase tracking-wider text-brand-dark/45 mb-2.5">
-                Instant Portal Preview (Select Offline Batch)
+                Instant Student Preview (Select Offline Batch)
               </div>
               <div className="flex flex-wrap gap-2">
                 {trackOptions.map((opt) => (
@@ -243,6 +260,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
                     placeholder="name@example.com"
                   />
                 </div>
+                <p className="mt-2 text-[11px] text-brand-dark/50">
+                  Role auto-detected by email · Faculty/Staff test:{' '}
+                  <button
+                    type="button"
+                    onClick={() => handleAutofillRoleEmail('mentor@atozenius.in')}
+                    className="font-mono text-brand-accent hover:underline"
+                  >
+                    mentor@atozenius.in
+                  </button>{' '}
+                  or{' '}
+                  <button
+                    type="button"
+                    onClick={() => handleAutofillRoleEmail('staff@atozenius.com')}
+                    className="font-mono text-brand-accent hover:underline"
+                  >
+                    staff@atozenius.com
+                  </button>
+                </p>
               </div>
 
               <div className="relative group">
@@ -266,7 +301,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
 
               <div>
                 <label className="block text-xs font-bold text-brand-dark/45 uppercase tracking-wider mb-2">
-                  Enrolled Course Track
+                  Course Track (for learners)
                 </label>
                 <select
                   value={selectedTrack}
@@ -343,7 +378,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
                 whileTap={{ scale: 0.99 }}
                 className="w-full py-4 md:py-5 bg-brand-dark text-brand-cream rounded-xl font-bold tracking-wide shadow-lg hover:shadow-xl hover:bg-brand-accent transition-all flex items-center justify-center gap-3 mt-4"
               >
-                {isLogin ? 'Enter Student Portal' : 'Create Account & Enter'}
+                {isLogin ? 'Continue to Workspace' : 'Create Account & Enter'}
                 <ArrowRight size={18} />
               </motion.button>
             </form>

@@ -10,15 +10,15 @@ import {
   Check,
 } from 'lucide-react';
 import {
-  portalTracks,
+  getResolvedTrackData,
+  PortalSession,
   readStorage,
   STORAGE_KEYS,
-  StudentSession,
   writeStorage,
 } from '../../data/portal';
 
 interface NotesPageProps {
-  session: StudentSession;
+  session: PortalSession;
   initialLectureId?: string | null;
   onAskDoubt: (lectureLabel: string) => void;
 }
@@ -28,7 +28,7 @@ const NotesPage: React.FC<NotesPageProps> = ({
   initialLectureId,
   onAskDoubt,
 }) => {
-  const track = portalTracks[session.trackId];
+  const track = getResolvedTrackData(session.trackId);
   const [selectedLectureId, setSelectedLectureId] = useState<string>(
     initialLectureId && track.lectures.some((l) => l.id === initialLectureId)
       ? initialLectureId

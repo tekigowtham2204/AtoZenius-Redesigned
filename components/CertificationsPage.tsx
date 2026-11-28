@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, CheckCircle2, ShieldCheck, ArrowRight, Search, FileCheck2 } from 'lucide-react';
+import { IssuedCertificate, verifyCertificateById } from '../data/portal';
 import { ViewState } from '../types';
 
 interface CertificationsPageProps {
@@ -25,16 +26,14 @@ const criteria = [
 
 const CertificationsPage: React.FC<CertificationsPageProps> = ({ onNavigate, onOpenAuth }) => {
   const [certId, setCertId] = useState('');
-  const [verifyStatus, setVerifyStatus] = useState<'idle' | 'sample' | 'not-found'>('idle');
+  const [matchedCert, setMatchedCert] = useState<IssuedCertificate | null>(null);
+  const [verifyChecked, setVerifyChecked] = useState(false);
 
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleaned = certId.trim().toUpperCase();
-    if (cleaned === 'ATZ-2026-8492') {
-      setVerifyStatus('sample');
-    } else if (cleaned.length > 0) {
-      setVerifyStatus('not-found');
-    }
+    if (!certId.trim()) return;
+    setMatchedCert(verifyCertificateById(certId) || null);
+    setVerifyChecked(true);
   };
 
   return (
@@ -170,7 +169,10 @@ const CertificationsPage: React.FC<CertificationsPageProps> = ({ onNavigate, onO
                     value={certId}
                     onChange={(e) => {
                       setCertId(e.target.value);
-                      if (verifyStatus !== 'idle') setVerifyStatus('idle');
+                      if (verifyChecked) {
+                        setVerifyChecked(false);
+                        setMatchedCert(null);
+                      }
                     }}
                     placeholder="Enter Credential ID (e.g. ATZ-2026-8492)"
                     className="w-full pl-11 pr-4 py-3.5 rounded-full bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
@@ -184,14 +186,15 @@ const CertificationsPage: React.FC<CertificationsPageProps> = ({ onNavigate, onO
                 </button>
               </form>
 
-              {verifyStatus === 'sample' && (
+              {verifyChecked && matchedCert && (
                 <p className="mt-3 text-xs font-semibold text-green-700">
-                  Verified sample credential: ATZ-2026-8492 — AI Full-Stack Development (3 Minor + 2 Major Projects).
+                  Verified credential {matchedCert.id}: {matchedCert.studentName} —{' '}
+                  {matchedCert.programTitle} ({matchedCert.batchCode}, {matchedCert.issuedDate}).
                 </p>
               )}
-              {verifyStatus === 'not-found' && (
+              {verifyChecked && !matchedCert && (
                 <p className="mt-3 text-xs font-semibold text-brand-dark/65">
-                  No local sample match for "{certId}". For official employer verification, reach us on{' '}
+                  No issued match for "{certId}". For official employer verification, reach us on{' '}
                   <button
                     type="button"
                     onClick={() => onNavigate('contact')}

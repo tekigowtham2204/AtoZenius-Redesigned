@@ -9,34 +9,25 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import {
-  CommunityReply,
-  CommunityThread,
   computeInitials,
-  portalTracks,
-  readStorage,
-  STORAGE_KEYS,
-  StudentSession,
-  writeStorage,
+  getResolvedTrackData,
+  PortalSession,
+  postBatchReply,
+  postBatchThread,
 } from '../../data/portal';
 
 interface CommunityPageProps {
-  session: StudentSession;
+  session: PortalSession;
   prefillLecture?: string | null;
 }
 
 const filters = ['All', 'Course Doubts', 'Mentor Pinned', 'Placement Alerts'] as const;
 
 const CommunityPage: React.FC<CommunityPageProps> = ({ session, prefillLecture }) => {
-  const track = portalTracks[session.trackId];
+  const [, setRefreshTick] = useState(0);
+  const track = getResolvedTrackData(session.trackId);
   const [selectedFilter, setSelectedFilter] = useState<(typeof filters)[number]>('All');
   const [searchQuery, setSearchQuery] = useState('');
-
-  const [customThreadsMap, setCustomThreadsMap] = useState<
-    Record<string, CommunityThread[]>
-  >(() => readStorage<Record<string, CommunityThread[]>>(STORAGE_KEYS.customThreads, {}));
-  const [customRepliesMap, setCustomRepliesMap] = useState<
-    Record<string, CommunityReply[]>
-  >(() => readStorage<Record<string, CommunityReply[]>>(STORAGE_KEYS.customReplies, {}));
 
   const [newTitle, setNewTitle] = useState('');
   const [newLectureRef, setNewLectureRef] = useState(prefillLecture || '');
@@ -49,13 +40,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ session, prefillLecture }
     }
   }, [prefillLecture]);
 
-  const batchThreads = [
-    ...(customThreadsMap[track.id] || []),
-    ...track.threads,
-  ].map((thread) => ({
-    ...thread,
-    replies: [...thread.replies, ...(customRepliesMap[thread.id] || [])],
-  }));
+  const batchThreads = track.threads;
 
   const filteredThreads = batchThreads.filter((t) => {
     const matchesFilter = selectedFilter === 'All' || t.category === selectedFilter;
@@ -72,7 +57,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ session, prefillLecture }
     e.preventDefault();
     if (!newTitle.trim() || !newBody.trim()) return;
 
-    const created: CommunityThread = {
+    postBatchThread(track.id, {
       id: `custom-${Date.now()}`,
       category: 'Course Doubts',
       lectureRef: newLectureRef.trim() || undefined,
@@ -82,18 +67,12 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ session, prefillLecture }
       title: newTitle.trim(),
       body: newBody.trim(),
       replies: [],
-    };
+    });
 
-    const existingForTrack = customThreadsMap[track.id] || [];
-    const next = {
-      ...customThreadsMap,
-      [track.id]: [created, ...existingForTrack],
-    };
-    setCustomThreadsMap(next);
-    writeStorage(STORAGE_KEYS.customThreads, next);
     setNewTitle('');
     setNewBody('');
     setNewLectureRef('');
+    setRefreshTick((n) => n + 1);
   };
 
   const handlePostReply = (threadId: string, e: React.FormEvent) => {
@@ -101,21 +80,16 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ session, prefillLecture }
     const text = (replyDrafts[threadId] || '').trim();
     if (!text) return;
 
-    const reply: CommunityReply = {
+    postBatchReply(threadId, {
       id: `reply-${Date.now()}`,
       author: session.name,
       role: 'Student',
       timeAgo: 'Just now',
       body: text,
-    };
+    });
 
-    const next = {
-      ...customRepliesMap,
-      [threadId]: [...(customRepliesMap[threadId] || []), reply],
-    };
-    setCustomRepliesMap(next);
-    writeStorage(STORAGE_KEYS.customReplies, next);
     setReplyDrafts((prev) => ({ ...prev, [threadId]: '' }));
+    setRefreshTick((n) => n + 1);
   };
 
   return (
