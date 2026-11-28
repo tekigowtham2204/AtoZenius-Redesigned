@@ -34,6 +34,7 @@ import {
   updateProvisionedStudentBatch,
   updateTeamMemberAccess,
 } from '../../../data/portal';
+import MinimalSelect from '../../ui/MinimalSelect';
 
 const roleLabels: Record<Exclude<PortalRole, 'student'>, string> = {
   staff: 'Staff',
@@ -526,20 +527,20 @@ const AdminAccessPage: React.FC = () => {
                               {editRole === 'mentor' ? 'Assigned Batch' : 'Title'}
                             </label>
                             {editRole === 'mentor' ? (
-                              <select
+                              <MinimalSelect
                                 value={editTrack}
-                                onChange={(e) => setEditTrack(e.target.value as PortalTrackId)}
-                                className="w-full px-3 py-2 rounded-xl bg-white border border-brand-dark/15 text-xs font-bold"
-                              >
-                                {activeTrackIds.map((id) => {
+                                onChange={(val) => setEditTrack(val as PortalTrackId)}
+                                tone="light"
+                                size="sm"
+                                options={activeTrackIds.map((id) => {
                                   const t = getResolvedTrackData(id);
-                                  return (
-                                    <option key={id} value={id}>
-                                      {t.batchCode}
-                                    </option>
-                                  );
+                                  return {
+                                    value: id,
+                                    label: t.batchCode,
+                                    meta: t.courseTitle,
+                                  };
                                 })}
-                              </select>
+                              />
                             ) : (
                               <input
                                 type="text"
@@ -683,26 +684,27 @@ const AdminAccessPage: React.FC = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2.5">
-                      <select
+                      <MinimalSelect
                         value={st.trackId}
-                        aria-label={`Batch for ${st.name}`}
-                        onChange={(e) => {
+                        ariaLabel={`Batch for ${st.name}`}
+                        tone="light"
+                        size="sm"
+                        align="right"
+                        onChange={(val) => {
                           setStudents(
-                            updateProvisionedStudentBatch(st.id, e.target.value as PortalTrackId)
+                            updateProvisionedStudentBatch(st.id, val as PortalTrackId)
                           );
                           flash(`Updated batch for ${st.name}`);
                         }}
-                        className="px-3 py-2 rounded-xl bg-white border border-brand-dark/15 text-xs font-bold text-brand-dark"
-                      >
-                        {activeTrackIds.map((id) => {
+                        options={activeTrackIds.map((id) => {
                           const t = getResolvedTrackData(id);
-                          return (
-                            <option key={id} value={id}>
-                              {t.batchCode}
-                            </option>
-                          );
+                          return {
+                            value: id,
+                            label: t.batchCode,
+                            meta: t.courseTitle,
+                          };
                         })}
-                      </select>
+                      />
 
                       <button
                         type="button"

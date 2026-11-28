@@ -70,51 +70,71 @@ const allProtectedViews: ViewState[] = [
 ];
 
 const roleHome = (role: PortalRole, session?: PortalSession | null): ViewState => {
-  if (role === 'admin') return 'admin-overview';
-  if (role === 'manager') {
-    if (session && hasTeamPermission(session, 'view_overview')) return 'admin-overview';
-    return 'admin-operations';
+  switch (role) {
+    case 'admin':
+      return 'admin-overview';
+    case 'manager':
+      if (session) {
+        if (hasTeamPermission(session, 'view_overview')) return 'admin-overview';
+        if (
+          hasTeamPermission(session, 'manage_admissions') ||
+          hasTeamPermission(session, 'manage_batches') ||
+          hasTeamPermission(session, 'manage_placements')
+        ) {
+          return 'admin-operations';
+        }
+        if (hasTeamPermission(session, 'manage_team')) return 'admin-access';
+        if (hasTeamPermission(session, 'edit_website')) return 'admin-website';
+        if (hasTeamPermission(session, 'mentor_workspace')) return 'mentor-desk';
+      }
+      return 'admin-operations';
+    case 'mentor':
+      return 'mentor-desk';
+    case 'staff':
+      return 'staff-ops';
+    case 'student':
+      return 'dashboard';
   }
-  if (role === 'mentor') return 'mentor-desk';
-  if (role === 'staff') return 'staff-ops';
-  return 'dashboard';
 };
 
 const guardViewForSession = (requested: ViewState, session: PortalSession | null): ViewState => {
   if (!allProtectedViews.includes(requested)) return requested;
   if (!session) return 'auth';
-  if (session.role === 'admin') return requested;
-  if (session.role === 'student') {
-    if (!studentViews.includes(requested)) return 'dashboard';
-    if (!session.trackId && requested !== 'dashboard') return 'dashboard';
-    return requested;
-  }
-  if (session.role === 'mentor' && !mentorViews.includes(requested)) return 'mentor-desk';
-  if (session.role === 'manager') {
-    if (requested === 'admin-overview' && hasTeamPermission(session, 'view_overview')) return requested;
-    if (requested === 'admin-website' && hasTeamPermission(session, 'edit_website')) return requested;
-    if (requested === 'admin-access' && hasTeamPermission(session, 'manage_team')) return requested;
-    if (
-      requested === 'admin-operations' &&
-      (hasTeamPermission(session, 'manage_admissions') ||
-        hasTeamPermission(session, 'manage_batches') ||
-        hasTeamPermission(session, 'manage_placements'))
-    ) {
+
+  switch (session.role) {
+    case 'admin':
       return requested;
-    }
-    return roleHome('manager', session);
+    case 'student':
+      if (!studentViews.includes(requested)) return 'dashboard';
+      if (!session.trackId && requested !== 'dashboard') return 'dashboard';
+      return requested;
+    case 'mentor':
+      return mentorViews.includes(requested) ? requested : 'mentor-desk';
+    case 'manager':
+      if (requested === 'admin-overview' && hasTeamPermission(session, 'view_overview')) return requested;
+      if (requested === 'admin-website' && hasTeamPermission(session, 'edit_website')) return requested;
+      if (requested === 'admin-access' && hasTeamPermission(session, 'manage_team')) return requested;
+      if (mentorViews.includes(requested) && hasTeamPermission(session, 'mentor_workspace')) return requested;
+      if (
+        requested === 'admin-operations' &&
+        (hasTeamPermission(session, 'manage_admissions') ||
+          hasTeamPermission(session, 'manage_batches') ||
+          hasTeamPermission(session, 'manage_placements'))
+      ) {
+        return requested;
+      }
+      return roleHome('manager', session);
+    case 'staff':
+      if (requested === 'staff-ops') return requested;
+      if (requested === 'staff-batches' && hasTeamPermission(session, 'manage_batches')) return requested;
+      if (requested === 'staff-admissions' && hasTeamPermission(session, 'manage_admissions')) return requested;
+      if (requested === 'staff-placements' && hasTeamPermission(session, 'manage_placements')) return requested;
+      if (requested === 'admin-access' && hasTeamPermission(session, 'manage_team')) return requested;
+      if (requested === 'admin-website' && hasTeamPermission(session, 'edit_website')) return requested;
+      if (requested === 'admin-overview' && hasTeamPermission(session, 'view_overview')) return requested;
+      if (mentorViews.includes(requested) && hasTeamPermission(session, 'mentor_workspace')) return requested;
+      return 'staff-ops';
   }
-  if (session.role === 'staff') {
-    if (requested === 'staff-ops') return requested;
-    if (requested === 'staff-batches' && hasTeamPermission(session, 'manage_batches')) return requested;
-    if (requested === 'staff-admissions' && hasTeamPermission(session, 'manage_admissions')) return requested;
-    if (requested === 'staff-placements' && hasTeamPermission(session, 'manage_placements')) return requested;
-    if (requested === 'admin-access' && hasTeamPermission(session, 'manage_team')) return requested;
-    if (requested === 'admin-website' && hasTeamPermission(session, 'edit_website')) return requested;
-    if (requested === 'admin-overview' && hasTeamPermission(session, 'view_overview')) return requested;
-    return 'staff-ops';
-  }
-  return requested;
 };
 
 const BASE_PATH = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');

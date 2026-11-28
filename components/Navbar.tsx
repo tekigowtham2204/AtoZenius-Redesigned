@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronDown, LogOut, Award, BookOpen, Globe, LayoutDashboard, Users } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, Award, BookOpen, Globe, LayoutDashboard, Users, ArrowUpRight } from 'lucide-react';
 import { ViewState } from '../types';
 import {
   getActiveTrackIds,
@@ -65,12 +65,30 @@ const roleNavLinks: Record<PortalRole, { name: string; href: string; view: ViewS
   ],
 };
 
-const roleHomeRoute: Record<PortalRole, ViewState> = {
-  student: 'dashboard',
-  mentor: 'mentor-desk',
-  staff: 'staff-ops',
-  manager: 'admin-overview',
-  admin: 'admin-overview',
+const getRoleHomeTarget = (session: PortalSession): { view: ViewState; href: string } => {
+  switch (session.role) {
+    case 'admin':
+      return { view: 'admin-overview', href: '/admin' };
+    case 'manager':
+      if (hasTeamPermission(session, 'view_overview')) return { view: 'admin-overview', href: '/admin' };
+      if (
+        hasTeamPermission(session, 'manage_admissions') ||
+        hasTeamPermission(session, 'manage_batches') ||
+        hasTeamPermission(session, 'manage_placements')
+      ) {
+        return { view: 'admin-operations', href: '/admin/operations' };
+      }
+      if (hasTeamPermission(session, 'manage_team')) return { view: 'admin-access', href: '/admin/access' };
+      if (hasTeamPermission(session, 'edit_website')) return { view: 'admin-website', href: '/admin/website' };
+      if (hasTeamPermission(session, 'mentor_workspace')) return { view: 'mentor-desk', href: '/mentor' };
+      return { view: 'admin-operations', href: '/admin/operations' };
+    case 'mentor':
+      return { view: 'mentor-desk', href: '/mentor' };
+    case 'staff':
+      return { view: 'staff-ops', href: '/staff' };
+    case 'student':
+      return { view: 'dashboard', href: '/dashboard' };
+  }
 };
 
 const Navbar: React.FC<NavbarProps> = ({
@@ -151,12 +169,18 @@ const Navbar: React.FC<NavbarProps> = ({
       ) {
         links.push({ name: 'Operations', href: '/admin/operations', view: 'admin-operations' });
       }
-      return links.length > 0 ? links : roleNavLinks.manager;
+      if (hasTeamPermission(session, 'mentor_workspace')) {
+        links.push({ name: 'Mentor Desk', href: '/mentor', view: 'mentor-desk' });
+      }
+      return links;
     }
     if (session.role === 'staff') {
       const links: { name: string; href: string; view: ViewState }[] = [
         { name: 'Ops Hub', href: '/staff', view: 'staff-ops' },
       ];
+      if (hasTeamPermission(session, 'view_overview')) {
+        links.push({ name: 'Overview', href: '/admin', view: 'admin-overview' });
+      }
       if (hasTeamPermission(session, 'manage_batches')) {
         links.push({ name: 'Batches', href: '/staff/batches', view: 'staff-batches' });
       }
@@ -171,6 +195,9 @@ const Navbar: React.FC<NavbarProps> = ({
       }
       if (hasTeamPermission(session, 'edit_website')) {
         links.push({ name: 'Edit Website', href: '/admin/website', view: 'admin-website' });
+      }
+      if (hasTeamPermission(session, 'mentor_workspace')) {
+        links.push({ name: 'Mentor Desk', href: '/mentor', view: 'mentor-desk' });
       }
       return links;
     }
@@ -204,10 +231,10 @@ const Navbar: React.FC<NavbarProps> = ({
       >
         <div className="container mx-auto px-6 md:px-8 flex justify-between items-center">
           <a
-            href={session ? `/${roleHomeRoute[session.role]}` : '/'}
+            href={session ? getRoleHomeTarget(session).href : '/'}
             onClick={(e) => {
               e.preventDefault();
-              if (onNavigate) onNavigate(session ? roleHomeRoute[session.role] : 'landing');
+              if (onNavigate) onNavigate(session ? getRoleHomeTarget(session).view : 'landing');
             }}
             className="text-xl md:text-2xl font-bold tracking-tighter text-brand-dark relative group"
           >
@@ -412,59 +439,95 @@ const Navbar: React.FC<NavbarProps> = ({
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, x: '100%' }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '100%' }}
-            transition={{ type: 'tween', ease: 'circOut', duration: 0.4 }}
-            className="print:hidden fixed inset-0 z-50 bg-brand-cream flex flex-col justify-center items-center space-y-7 px-6"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="print:hidden md:hidden fixed inset-0 z-50 bg-brand-cream flex flex-col"
           >
-            <button
-              type="button"
-              className="absolute top-6 right-6 text-brand-dark p-2"
-              onClick={() => setIsMobileMenuOpen(false)}
-              aria-label="Close menu"
-            >
-              <X size={32} />
-            </button>
-
-            {session && (
-              <div className="text-center pb-2">
-                <div className="text-xs font-mono text-brand-accent font-semibold uppercase">
-                  {roleBadge}
-                </div>
-                <div className="text-sm font-bold text-brand-dark">{session.name}</div>
-              </div>
-            )}
-
-            {navLinks.map((item) => (
-              <a
-                key={item.name}
-                href={item.href}
-                className={`text-3xl font-bold transition-colors tracking-tight inline-flex items-center gap-3 ${
-                  currentView === item.view
-                    ? 'text-brand-accent'
-                    : 'text-brand-dark hover:text-brand-accent'
-                }`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsMobileMenuOpen(false);
-                  if (onNavigate) onNavigate(item.view);
-                }}
+            {/* Top Bar */}
+            <div className="px-6 py-5 flex items-center justify-between border-b border-brand-dark/10 shrink-0">
+              <span className="text-xl font-bold tracking-tighter text-brand-dark">
+                AtoZenius<span className="text-brand-accent">.</span>
+              </span>
+              <button
+                type="button"
+                className="w-10 h-10 rounded-full bg-white border border-brand-dark/10 flex items-center justify-center text-brand-dark hover:border-brand-dark/30 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+                aria-label="Close menu"
               >
-                <span>{item.name}</span>
-                {(item.view === 'messages' || item.view === 'mentor-messages') &&
-                  unreadMessages > 0 && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-brand-accent text-white text-xs font-bold">
-                      {unreadMessages}
-                    </span>
-                  )}
-              </a>
-            ))}
+                <X size={18} />
+              </button>
+            </div>
 
-            {session ? (
-              <div className="flex flex-col items-center gap-4 pt-4">
-                {session.role === 'student' && onSwitchTrack && (
-                  <div className="flex flex-wrap justify-center gap-2">
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-6">
+              {session && (
+                <div className="p-4 rounded-2xl bg-white border border-brand-dark/10 flex items-center gap-3.5 shadow-sm">
+                  <span className="w-11 h-11 rounded-full bg-brand-dark text-white text-sm font-bold flex items-center justify-center shrink-0">
+                    {session.initials}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-mono text-brand-accent font-bold uppercase tracking-wider truncate">
+                      {roleBadge}
+                    </div>
+                    <div className="text-sm font-bold text-brand-dark truncate">
+                      {session.name}
+                    </div>
+                    <div className="text-xs text-brand-dark/50 truncate">{session.email}</div>
+                  </div>
+                </div>
+              )}
+
+              <nav className="divide-y divide-brand-dark/8 border-y border-brand-dark/8">
+                {navLinks.map((item, idx) => {
+                  const isActive = currentView === item.view;
+                  return (
+                    <a
+                      key={item.name}
+                      href={item.href}
+                      className={`py-4 flex items-center justify-between gap-3 transition-colors ${
+                        isActive ? 'text-brand-accent' : 'text-brand-dark hover:text-brand-accent'
+                      }`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setIsMobileMenuOpen(false);
+                        if (onNavigate) onNavigate(item.view);
+                      }}
+                    >
+                      <div className="flex items-baseline gap-3.5 min-w-0">
+                        <span className="text-[11px] font-mono text-brand-dark/35 shrink-0">
+                          {String(idx + 1).padStart(2, '0')}
+                        </span>
+                        <span className="text-xl font-bold tracking-tight truncate">
+                          {item.name}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {(item.view === 'messages' || item.view === 'mentor-messages') &&
+                          unreadMessages > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-brand-accent text-white text-[11px] font-bold">
+                              {unreadMessages}
+                            </span>
+                          )}
+                        {isActive ? (
+                          <span className="w-2 h-2 rounded-full bg-brand-accent" />
+                        ) : (
+                          <ArrowUpRight size={16} className="text-brand-dark/30" />
+                        )}
+                      </div>
+                    </a>
+                  );
+                })}
+              </nav>
+
+              {session && session.role === 'student' && onSwitchTrack && (
+                <div className="space-y-2.5">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-brand-dark/45">
+                    Switch Offline Batch (Demo)
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {trackSwitcherItems.map((item) => (
                       <button
                         key={item.id}
@@ -473,42 +536,48 @@ const Navbar: React.FC<NavbarProps> = ({
                           onSwitchTrack(item.id);
                           setIsMobileMenuOpen(false);
                         }}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold border ${
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors ${
                           session.trackId === item.id
                             ? 'bg-brand-dark text-white border-brand-dark'
-                            : 'bg-white text-brand-dark/70 border-brand-dark/15'
+                            : 'bg-white text-brand-dark/70 border-brand-dark/12'
                         }`}
                       >
                         {item.label}
                       </button>
                     ))}
                   </div>
-                )}
-                {onLogout && (
+                </div>
+              )}
+            </div>
+
+            {/* Anchored Footer Action */}
+            <div className="px-6 py-5 border-t border-brand-dark/10 bg-[#FDFBF7] shrink-0">
+              {session ? (
+                onLogout && (
                   <button
                     type="button"
                     onClick={() => {
                       setIsMobileMenuOpen(false);
                       onLogout();
                     }}
-                    className="px-8 py-3 text-sm font-bold text-red-600 border border-red-200 rounded-full bg-white"
+                    className="w-full py-3.5 text-xs font-bold text-red-600 border border-red-200 rounded-full bg-white hover:bg-red-50 transition-colors inline-flex items-center justify-center gap-2"
                   >
-                    Sign Out
+                    <LogOut size={14} /> Sign Out
                   </button>
-                )}
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onOpenAuth();
-                }}
-                className="px-12 py-4 text-lg font-bold text-white bg-brand-dark rounded-full shadow-xl"
-              >
-                Get Started
-              </button>
-            )}
+                )
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onOpenAuth();
+                  }}
+                  className="w-full py-3.5 text-sm font-bold text-white bg-brand-dark rounded-full hover:bg-brand-accent transition-colors shadow-lg"
+                >
+                  Get Started
+                </button>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

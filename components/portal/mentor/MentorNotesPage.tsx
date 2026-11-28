@@ -181,7 +181,7 @@ const MentorNotesPage: React.FC<MentorNotesPageProps> = ({ session, onSelectTrac
               placeholder="Highlighted in Offline Class callout (key tip or common mistake)"
               className="w-full px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
             />
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
               <button
                 type="submit"
                 className="px-6 py-2.5 bg-brand-dark text-white rounded-full text-xs font-bold hover:bg-brand-accent transition-colors"

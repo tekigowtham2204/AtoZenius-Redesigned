@@ -286,7 +286,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({
                   {!siteConfig.communityReadOnly && (
                     <form
                       onSubmit={(e) => handlePostReply(thread.id, e)}
-                      className="flex gap-2 pt-3 border-t border-brand-dark/5"
+                      className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-brand-dark/5"
                     >
                       <input
                         type="text"
@@ -295,11 +295,11 @@ const CommunityPage: React.FC<CommunityPageProps> = ({
                           setReplyDrafts((prev) => ({ ...prev, [thread.id]: e.target.value }))
                         }
                         placeholder="Write a helpful reply..."
-                        className="flex-1 px-4 py-2 rounded-full bg-brand-cream border border-brand-dark/10 text-xs focus:outline-none focus:border-brand-accent"
+                        className="w-full sm:flex-1 min-w-0 px-4 py-2.5 sm:py-2 rounded-full bg-brand-cream border border-brand-dark/10 text-xs focus:outline-none focus:border-brand-accent"
                       />
                       <button
                         type="submit"
-                        className="px-4 py-2 bg-brand-dark text-white rounded-full text-xs font-bold hover:bg-brand-accent transition-colors"
+                        className="w-full sm:w-auto shrink-0 px-4 py-2.5 sm:py-2 bg-brand-dark text-white rounded-full text-xs font-bold hover:bg-brand-accent transition-colors"
                       >
                         Reply
                       </button>

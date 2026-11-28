@@ -34,6 +34,7 @@ import {
   toggleMentorVisibility,
   toggleStoryVisibility,
 } from '../../../data/portal';
+import MinimalSelect from '../../ui/MinimalSelect';
 
 type CmsTab = 'brand' | 'courses' | 'mentors-stories' | 'blog';
 
@@ -377,17 +378,19 @@ const AdminWebsitePage: React.FC = () => {
               />
 
               <div className="grid grid-cols-2 gap-3">
-                <select
+                <MinimalSelect
                   value={newCourseCategory}
-                  onChange={(e) => setNewCourseCategory(e.target.value as CourseCategory)}
-                  className="px-3.5 py-3 rounded-xl bg-white/10 border border-white/15 text-xs text-white focus:outline-none focus:border-[#60A5FA]"
-                >
-                  <option value="IT" className="text-brand-dark">IT</option>
-                  <option value="Pharma" className="text-brand-dark">Pharma</option>
-                  <option value="Non IT & Management" className="text-brand-dark">Non IT &amp; Management</option>
-                  <option value="Agriculture" className="text-brand-dark">Agriculture</option>
-                  <option value="Advanced Courses" className="text-brand-dark">Advanced Courses</option>
-                </select>
+                  onChange={(val) => setNewCourseCategory(val as CourseCategory)}
+                  tone="dark"
+                  size="sm"
+                  options={[
+                    { value: 'IT', label: 'IT' },
+                    { value: 'Pharma', label: 'Pharma' },
+                    { value: 'Non IT & Management', label: 'Non IT & Management' },
+                    { value: 'Agriculture', label: 'Agriculture' },
+                    { value: 'Advanced Courses', label: 'Advanced Courses' },
+                  ]}
+                />
                 <input
                   type="text"
                   value={newCourseDuration}
@@ -551,19 +554,21 @@ const AdminWebsitePage: React.FC = () => {
                   className="w-full px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm"
                 />
                 <div className="grid grid-cols-2 gap-3">
-                  <select
+                  <MinimalSelect
                     value={newMentorSpec}
-                    onChange={(e) =>
-                      setNewMentorSpec(e.target.value as Exclude<MentorSpecialty, 'All'>)
+                    onChange={(val) =>
+                      setNewMentorSpec(val as Exclude<MentorSpecialty, 'All'>)
                     }
-                    className="px-3 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-xs"
-                  >
-                    <option value="IT & Engineering">IT &amp; Engineering</option>
-                    <option value="AI & Data">AI &amp; Data</option>
-                    <option value="Pharma & Healthcare">Pharma &amp; Healthcare</option>
-                    <option value="Management & Growth">Management &amp; Growth</option>
-                    <option value="AgriTech">AgriTech</option>
-                  </select>
+                    tone="cream"
+                    size="sm"
+                    options={[
+                      { value: 'IT & Engineering', label: 'IT & Engineering' },
+                      { value: 'AI & Data', label: 'AI & Data' },
+                      { value: 'Pharma & Healthcare', label: 'Pharma & Healthcare' },
+                      { value: 'Management & Growth', label: 'Management & Growth' },
+                      { value: 'AgriTech', label: 'AgriTech' },
+                    ]}
+                  />
                   <input
                     type="text"
                     value={newMentorExp}
@@ -647,15 +652,17 @@ const AdminWebsitePage: React.FC = () => {
                   placeholder="Student Name"
                   className="w-full px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm"
                 />
-                <select
+                <MinimalSelect
                   value={newStoryTrack}
-                  onChange={(e) => setNewStoryTrack(e.target.value as Exclude<StoryTrack, 'All'>)}
-                  className="w-full px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-xs"
-                >
-                  <option value="Medical Coding">Medical Coding</option>
-                  <option value="Python Full Stack">Python Full Stack</option>
-                  <option value="Java Full Stack">Java Full Stack</option>
-                </select>
+                  onChange={(val) => setNewStoryTrack(val as Exclude<StoryTrack, 'All'>)}
+                  tone="cream"
+                  size="sm"
+                  options={[
+                    { value: 'Medical Coding', label: 'Medical Coding' },
+                    { value: 'Python Full Stack', label: 'Python Full Stack' },
+                    { value: 'Java Full Stack', label: 'Java Full Stack' },
+                  ]}
+                />
                 <input
                   type="text"
                   required
@@ -735,18 +742,20 @@ const AdminWebsitePage: React.FC = () => {
                 className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-sm text-white placeholder:text-white/40"
               />
               <div className="grid grid-cols-2 gap-3">
-                <select
+                <MinimalSelect
                   value={newPostCategory}
-                  onChange={(e) =>
-                    setNewPostCategory(e.target.value as Exclude<BlogCategory, 'All'>)
+                  onChange={(val) =>
+                    setNewPostCategory(val as Exclude<BlogCategory, 'All'>)
                   }
-                  className="px-3 py-3 rounded-xl bg-white/10 border border-white/15 text-xs text-white"
-                >
-                  <option value="AI & Tech" className="text-brand-dark">AI &amp; Tech</option>
-                  <option value="Pharma & Healthcare" className="text-brand-dark">Pharma &amp; Healthcare</option>
-                  <option value="Career Growth" className="text-brand-dark">Career Growth</option>
-                  <option value="Mentorship" className="text-brand-dark">Mentorship</option>
-                </select>
+                  tone="dark"
+                  size="sm"
+                  options={[
+                    { value: 'AI & Tech', label: 'AI & Tech' },
+                    { value: 'Pharma & Healthcare', label: 'Pharma & Healthcare' },
+                    { value: 'Career Growth', label: 'Career Growth' },
+                    { value: 'Mentorship', label: 'Mentorship' },
+                  ]}
+                />
                 <input
                   type="text"
                   value={newPostAuthor}

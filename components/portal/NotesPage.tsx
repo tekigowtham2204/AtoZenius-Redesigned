@@ -339,7 +339,7 @@ const NotesPage: React.FC<NotesPageProps> = ({
                 <div className="text-[11px] font-mono uppercase tracking-wider text-white/50 mb-3 print:text-neutral-600 print:font-bold">
                   {activeLecture.referenceSnippetTitle}
                 </div>
-                <pre className="text-xs sm:text-sm font-mono text-white/90 leading-relaxed whitespace-pre-wrap print:text-neutral-900">
+                <pre className="text-xs sm:text-sm font-mono text-white/90 leading-relaxed whitespace-pre sm:whitespace-pre-wrap print:whitespace-pre-wrap print:text-neutral-900">
                   {activeLecture.referenceSnippet}
                 </pre>
               </div>

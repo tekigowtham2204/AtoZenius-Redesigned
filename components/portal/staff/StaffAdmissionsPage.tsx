@@ -24,6 +24,7 @@ import {
   resolveTrackIdFromProgram,
   updateAdmissionsLeadStatus,
 } from '../../../data/portal';
+import MinimalSelect from '../../ui/MinimalSelect';
 
 const statusFilterOptions = ['All', 'New', 'Counseling', 'Enrolled'] as const;
 
@@ -287,57 +288,58 @@ const StaffAdmissionsPage: React.FC<StaffAdmissionsPageProps> = ({ embedded = fa
               <label className="block text-[11px] font-mono uppercase tracking-wider text-brand-dark/55 mb-1.5">
                 Course &amp; Batch
               </label>
-              <select
+              <MinimalSelect
                 value={trackId}
-                onChange={(e) => setTrackId(e.target.value as PortalTrackId)}
-                className="w-full px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm font-semibold focus:outline-none focus:border-brand-accent"
-              >
-                {getActiveTrackIds().map((id) => {
+                onChange={(val) => setTrackId(val as PortalTrackId)}
+                tone="cream"
+                options={getActiveTrackIds().map((id) => {
                   const t = getResolvedTrackData(id);
-                  return (
-                    <option key={id} value={id}>
-                      {t.courseTitle} ({t.batchCode})
-                    </option>
-                  );
+                  return {
+                    value: id,
+                    label: t.courseTitle,
+                    meta: t.batchCode,
+                  };
                 })}
-              </select>
+              />
             </div>
 
             <div>
               <label className="block text-[11px] font-mono uppercase tracking-wider text-brand-dark/55 mb-1.5">
                 Enrollment Source
               </label>
-              <select
+              <MinimalSelect
                 value={source}
-                onChange={(e) =>
+                onChange={(val) =>
                   setSource(
-                    e.target.value as Extract<
+                    val as Extract<
                       LeadSource,
                       'WhatsApp Enrollment' | 'Walk-In Counseling' | 'Phone Inquiry'
                     >
                   )
                 }
-                className="w-full px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm font-semibold focus:outline-none focus:border-brand-accent"
-              >
-                <option value="WhatsApp Enrollment">WhatsApp Enrollment</option>
-                <option value="Walk-In Counseling">Walk-In Counseling</option>
-                <option value="Phone Inquiry">Phone Inquiry</option>
-              </select>
+                tone="cream"
+                options={[
+                  { value: 'WhatsApp Enrollment', label: 'WhatsApp Enrollment' },
+                  { value: 'Walk-In Counseling', label: 'Walk-In Counseling' },
+                  { value: 'Phone Inquiry', label: 'Phone Inquiry' },
+                ]}
+              />
             </div>
 
             <div>
               <label className="block text-[11px] font-mono uppercase tracking-wider text-brand-dark/55 mb-1.5">
                 Pipeline Status
               </label>
-              <select
+              <MinimalSelect
                 value={initialStatus}
-                onChange={(e) => setInitialStatus(e.target.value as AdmissionsLead['status'])}
-                className="w-full px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm font-semibold focus:outline-none focus:border-brand-accent"
-              >
-                <option value="Enrolled">Enrolled (Auto-Generate Login)</option>
-                <option value="Counseling">Counseling Scheduled</option>
-                <option value="New">New Inquiry</option>
-              </select>
+                onChange={(val) => setInitialStatus(val as AdmissionsLead['status'])}
+                tone="cream"
+                options={[
+                  { value: 'Enrolled', label: 'Enrolled', meta: 'Auto-Login' },
+                  { value: 'Counseling', label: 'Counseling Scheduled' },
+                  { value: 'New', label: 'New Inquiry' },
+                ]}
+              />
             </div>
           </div>
 
@@ -434,17 +436,20 @@ const StaffAdmissionsPage: React.FC<StaffAdmissionsPageProps> = ({ embedded = fa
                 <label className="block text-[11px] font-mono uppercase tracking-wider text-brand-dark/55">
                   Update Pipeline Status
                 </label>
-                <select
+                <MinimalSelect
                   value={lead.status}
-                  onChange={(e) =>
-                    handleStatusChange(lead, e.target.value as AdmissionsLead['status'])
+                  tone="light"
+                  size="sm"
+                  align="right"
+                  onChange={(val) =>
+                    handleStatusChange(lead, val as AdmissionsLead['status'])
                   }
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-brand-dark/15 text-xs font-bold text-brand-dark focus:outline-none focus:border-brand-accent"
-                >
-                  <option value="New">New Inquiry</option>
-                  <option value="Counseling">Counseling Scheduled</option>
-                  <option value="Enrolled">Enrolled in Batch</option>
-                </select>
+                  options={[
+                    { value: 'New', label: 'New Inquiry' },
+                    { value: 'Counseling', label: 'Counseling Scheduled' },
+                    { value: 'Enrolled', label: 'Enrolled in Batch' },
+                  ]}
+                />
 
                 {provisioned ? (
                   <a

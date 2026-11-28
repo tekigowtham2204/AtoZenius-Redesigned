@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
+  ArrowLeft,
   BookOpen,
+  Check,
   CheckCircle2,
+  ChevronDown,
   Code2,
   Lock,
   MessageCircle,
@@ -12,6 +15,7 @@ import {
   Send,
   ShieldCheck,
   Users,
+  X,
 } from 'lucide-react';
 import {
   getActiveTrackIds,
@@ -50,12 +54,28 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [mobilePane, setMobilePane] = useState<'list' | 'chat'>(() =>
+    !isMentorSide && initialLectureRef ? 'chat' : 'list'
+  );
+  const [mobileAttachOpen, setMobileAttachOpen] = useState(false);
   const [draftBody, setDraftBody] = useState('');
   const [attachLectureRef, setAttachLectureRef] = useState(initialLectureRef || '');
+  const [lectureMenuOpen, setLectureMenuOpen] = useState(false);
   const [showSnippetBox, setShowSnippetBox] = useState(false);
   const [draftSnippet, setDraftSnippet] = useState('');
 
   const feedBottomRef = useRef<HTMLDivElement>(null);
+  const lectureMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (lectureMenuRef.current && !lectureMenuRef.current.contains(e.target as Node)) {
+        setLectureMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
 
   useEffect(() => {
     const onUpdated = () => setRefreshTick((n) => n + 1);
@@ -69,6 +89,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
       const conv = getOrCreateDirectConversation(session, activeTrackId, initialLectureRef);
       setActiveConvId(conv.id);
       setAttachLectureRef(initialLectureRef);
+      setMobilePane('chat');
     }
   }, [initialLectureRef, activeTrackId]);
 
@@ -126,6 +147,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
     );
     setActiveConvId(conv.id);
     setFilterTab('all');
+    setMobilePane('chat');
     setRefreshTick((n) => n + 1);
   };
 
@@ -144,6 +166,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
     setDraftBody('');
     setDraftSnippet('');
     setShowSnippetBox(false);
+    setMobileAttachOpen(false);
     setRefreshTick((n) => n + 1);
   };
 
@@ -161,11 +184,21 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.15 } }}
-      className="pt-28 md:pt-36 pb-20 min-h-screen bg-brand-cream"
+      className={`min-h-screen bg-brand-cream ${
+        mobilePane === 'chat' ? 'pt-20 pb-0 lg:pt-36 lg:pb-20' : 'pt-24 sm:pt-28 md:pt-36 pb-20'
+      }`}
     >
-      <div className="container mx-auto px-6 max-w-6xl">
+      <div
+        className={`container mx-auto max-w-6xl ${
+          mobilePane === 'chat' ? 'px-0 lg:px-6' : 'px-4 sm:px-6'
+        }`}
+      >
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 pb-6 border-b border-brand-dark/10">
+        <div
+          className={`${
+            mobilePane === 'chat' ? 'hidden lg:flex' : 'flex'
+          } flex-col md:flex-row md:items-end justify-between gap-4 mb-6 lg:mb-8 pb-5 lg:pb-6 border-b border-brand-dark/10`}
+        >
           <div>
             <p className="text-xs font-mono text-brand-accent font-semibold mb-2 inline-flex items-center gap-1.5">
               <Lock size={12} /> Private In-App Messaging · Zero Phone Numbers Shared
@@ -184,11 +217,11 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
               <Plus size={14} /> Message {activeTrackData.mentorName.split(' ')[0]} Privately
             </button>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-nowrap lg:flex-wrap gap-1.5 overflow-x-auto pb-1 lg:pb-0 -mx-1 px-1 lg:mx-0 lg:px-0">
               <button
                 type="button"
                 onClick={() => setBatchFilter('all')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${
                   batchFilter === 'all'
                     ? 'bg-brand-dark text-white'
                     : 'bg-white border border-brand-dark/10 text-brand-dark/70'
@@ -206,7 +239,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                       setBatchFilter(id);
                       if (onSelectTrack) onSelectTrack(id);
                     }}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                    className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${
                       batchFilter === id
                         ? 'bg-brand-dark text-white'
                         : 'bg-white border border-brand-dark/10 text-brand-dark/70'
@@ -221,9 +254,19 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
         </div>
 
         {/* Split-Pane Messenger Container */}
-        <div className="bg-white rounded-[1.75rem] border border-brand-dark/10 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[600px] shadow-sm">
+        <div
+          className={`bg-white overflow-hidden grid grid-cols-1 lg:grid-cols-12 shadow-sm ${
+            mobilePane === 'chat'
+              ? 'h-[calc(100dvh-5rem)] lg:h-auto lg:min-h-[600px] lg:rounded-[1.75rem] lg:border lg:border-brand-dark/10'
+              : 'rounded-[1.5rem] lg:rounded-[1.75rem] border border-brand-dark/10 lg:min-h-[600px]'
+          }`}
+        >
           {/* Left Thread List */}
-          <aside className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-brand-dark/10 flex flex-col bg-[#F7F4EE]/45">
+          <aside
+            className={`${
+              mobilePane === 'chat' ? 'hidden lg:flex' : 'flex'
+            } lg:col-span-4 border-b lg:border-b-0 lg:border-r border-brand-dark/10 flex-col bg-[#F7F4EE]/45`}
+          >
             <div className="p-4 border-b border-brand-dark/10 space-y-3">
               <div className="relative">
                 <Search
@@ -239,7 +282,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                 />
               </div>
 
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-nowrap lg:flex-wrap gap-1.5 overflow-x-auto pb-0.5 lg:pb-0">
                 {(
                   [
                     { id: 'all', label: 'All' },
@@ -252,7 +295,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setFilterTab(tab.id)}
-                    className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors ${
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors ${
                       filterTab === tab.id
                         ? 'bg-brand-dark text-white'
                         : 'bg-white text-brand-dark/65 border border-brand-dark/10 hover:border-brand-dark/30'
@@ -264,7 +307,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto divide-y divide-brand-dark/10 max-h-[420px] lg:max-h-[560px]">
+            <div className="flex-1 overflow-y-auto divide-y divide-brand-dark/10 lg:max-h-[560px]">
               {filteredConversations.length === 0 ? (
                 <div className="p-6 text-center text-xs text-brand-dark/55">
                   No conversations match this filter.
@@ -279,47 +322,68 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                       : isMentorSide
                       ? conv.studentName
                       : conv.mentorName;
+                  const initials = title
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((part) => part[0]?.toUpperCase() || '')
+                    .join('');
 
                   return (
                     <button
                       key={conv.id}
                       type="button"
-                      onClick={() => setActiveConvId(conv.id)}
-                      className={`w-full text-left p-4 transition-colors flex flex-col gap-1.5 ${
-                        isActive ? 'bg-white border-l-4 border-l-brand-accent' : 'hover:bg-white/70'
+                      onClick={() => {
+                        setActiveConvId(conv.id);
+                        setMobilePane('chat');
+                      }}
+                      className={`w-full text-left p-4 transition-colors flex items-start gap-3 ${
+                        isActive ? 'bg-white lg:border-l-4 lg:border-l-brand-accent' : 'hover:bg-white/70'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-brand-accent font-bold inline-flex items-center gap-1">
-                          {conv.kind === 'batch-channel' ? (
-                            <Users size={11} />
-                          ) : (
-                            <MessageCircle size={11} />
-                          )}
-                          {conv.kind === 'batch-channel' ? 'Channel' : 'Direct'} · {conv.batchCode}
-                        </span>
-                        <span className="text-[10px] font-mono text-brand-dark/45">
-                          {conv.lastMessageAt}
-                        </span>
-                      </div>
+                      <span
+                        className={`lg:hidden w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ${
+                          conv.kind === 'batch-channel'
+                            ? 'bg-[#EEF3FF] text-brand-accent'
+                            : 'bg-brand-dark text-white'
+                        }`}
+                      >
+                        {conv.kind === 'batch-channel' ? <Users size={15} /> : initials}
+                      </span>
 
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-bold text-brand-dark truncate">{title}</span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {conv.status === 'resolved' && (
-                            <CheckCircle2 size={13} className="text-emerald-600" />
-                          )}
-                          {unread > 0 && (
-                            <span className="w-5 h-5 rounded-full bg-brand-accent text-white text-[10px] font-bold flex items-center justify-center">
-                              {unread}
-                            </span>
-                          )}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-brand-accent font-bold inline-flex items-center gap-1">
+                            {conv.kind === 'batch-channel' ? (
+                              <Users size={11} className="hidden lg:inline" />
+                            ) : (
+                              <MessageCircle size={11} className="hidden lg:inline" />
+                            )}
+                            {conv.kind === 'batch-channel' ? 'Channel' : 'Direct'} · {conv.batchCode}
+                          </span>
+                          <span className="text-[10px] font-mono text-brand-dark/45">
+                            {conv.lastMessageAt}
+                          </span>
                         </div>
-                      </div>
 
-                      <p className="text-xs text-brand-dark/60 line-clamp-1">
-                        {conv.lastMessagePreview}
-                      </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-bold text-brand-dark truncate">{title}</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {conv.status === 'resolved' && (
+                              <CheckCircle2 size={13} className="text-emerald-600" />
+                            )}
+                            {unread > 0 && (
+                              <span className="w-5 h-5 rounded-full bg-brand-accent text-white text-[10px] font-bold flex items-center justify-center">
+                                {unread}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-brand-dark/60 line-clamp-1">
+                          {conv.lastMessagePreview}
+                        </p>
+                      </div>
                     </button>
                   );
                 })
@@ -328,40 +392,54 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
           </aside>
 
           {/* Right Chat Thread */}
-          <div className="lg:col-span-8 flex flex-col justify-between bg-white">
+          <div
+            className={`${
+              mobilePane === 'list' ? 'hidden lg:flex' : 'flex'
+            } lg:col-span-8 flex-col justify-between bg-white h-full lg:h-auto min-h-0`}
+          >
             {activeConversation ? (
               <>
                 {/* Conversation Header */}
-                <div className="px-6 py-5 border-b border-brand-dark/10 flex flex-wrap items-center justify-between gap-3 bg-[#FDFBF7]">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-lg font-bold text-brand-dark">
-                        {activeConversation.kind === 'batch-channel'
-                          ? `${activeConversation.batchCode} Classroom Channel`
-                          : isMentorSide
-                          ? activeConversation.studentName
-                          : activeConversation.mentorName}
-                      </h2>
-                      <span className="text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-full bg-[#EEF3FF] text-brand-accent font-bold inline-flex items-center gap-1">
-                        <ShieldCheck size={11} />
-                        {activeConversation.kind === 'batch-channel'
-                          ? 'Official Batch'
-                          : isMentorSide
-                          ? activeConversation.batchCode
-                          : 'Verified Mentor'}
-                      </span>
-                      {activeConversation.status === 'resolved' && (
-                        <span className="text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
-                          Resolved
+                <div className="px-4 py-3.5 lg:px-6 lg:py-5 border-b border-brand-dark/10 flex items-center justify-between gap-2.5 bg-[#FDFBF7] shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setMobilePane('list')}
+                      aria-label="Back to conversations"
+                      className="lg:hidden w-9 h-9 rounded-full bg-white border border-brand-dark/10 flex items-center justify-center text-brand-dark shrink-0 hover:border-brand-dark/30"
+                    >
+                      <ArrowLeft size={16} />
+                    </button>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
+                        <h2 className="text-base lg:text-lg font-bold text-brand-dark truncate">
+                          {activeConversation.kind === 'batch-channel'
+                            ? `${activeConversation.batchCode} Classroom Channel`
+                            : isMentorSide
+                            ? activeConversation.studentName
+                            : activeConversation.mentorName}
+                        </h2>
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#EEF3FF] text-brand-accent font-bold inline-flex items-center gap-1 shrink-0">
+                          <ShieldCheck size={10} />
+                          {activeConversation.kind === 'batch-channel'
+                            ? 'Official Batch'
+                            : isMentorSide
+                            ? activeConversation.batchCode
+                            : 'Verified Mentor'}
                         </span>
+                        {activeConversation.status === 'resolved' && (
+                          <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold shrink-0">
+                            Resolved
+                          </span>
+                        )}
+                      </div>
+                      {activeConversation.lectureRef && (
+                        <div className="text-[11px] lg:text-xs font-mono text-brand-dark/55 mt-0.5 lg:mt-1 flex items-center gap-1.5 truncate">
+                          <BookOpen size={11} className="text-brand-accent shrink-0" />
+                          <span className="truncate">Topic: {activeConversation.lectureRef}</span>
+                        </div>
                       )}
                     </div>
-                    {activeConversation.lectureRef && (
-                      <div className="text-xs font-mono text-brand-dark/55 mt-1 inline-flex items-center gap-1.5">
-                        <BookOpen size={12} className="text-brand-accent" />
-                        Topic: {activeConversation.lectureRef}
-                      </div>
-                    )}
                   </div>
 
                   {isMentorSide && activeConversation.kind === 'direct' && (
@@ -371,7 +449,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                         toggleConversationStatus(activeConversation.id);
                         setRefreshTick((n) => n + 1);
                       }}
-                      className={`px-4 py-2 rounded-full text-xs font-bold border transition-colors inline-flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-[11px] lg:text-xs font-bold border transition-colors inline-flex items-center gap-1.5 shrink-0 ${
                         activeConversation.status === 'resolved'
                           ? 'bg-white border-brand-dark/15 text-brand-dark/70 hover:border-brand-dark/40'
                           : 'bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700'
@@ -379,11 +457,11 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                     >
                       {activeConversation.status === 'resolved' ? (
                         <>
-                          <RotateCcw size={12} /> Reopen Thread
+                          <RotateCcw size={12} /> <span className="hidden sm:inline">Reopen Thread</span><span className="sm:hidden">Reopen</span>
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 size={12} /> Mark Resolved
+                          <CheckCircle2 size={12} /> <span className="hidden sm:inline">Mark Resolved</span><span className="sm:hidden">Resolve</span>
                         </>
                       )}
                     </button>
@@ -391,7 +469,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                 </div>
 
                 {/* Messages Feed */}
-                <div className="flex-1 p-6 space-y-4 overflow-y-auto max-h-[420px]">
+                <div className="flex-1 p-4 lg:p-6 space-y-3.5 lg:space-y-4 overflow-y-auto min-h-0 lg:max-h-[420px]">
                   {messages.length === 0 ? (
                     <div className="py-12 text-center text-sm text-brand-dark/55">
                       Start the conversation below—your messages stay private inside AtoZenius.
@@ -452,7 +530,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
 
                             {msg.codeSnippet && (
                               <pre
-                                className={`mt-3 p-3 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap ${
+                                className={`mt-3 p-3 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre sm:whitespace-pre-wrap ${
                                   isMine
                                     ? 'bg-white/10 text-white/95'
                                     : 'bg-[#0A0B0E] text-white/95'
@@ -472,37 +550,176 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                 {/* Message Composer */}
                 <form
                   onSubmit={handleSend}
-                  className="p-5 border-t border-brand-dark/10 bg-[#FDFBF7] space-y-3"
+                  className="p-3 sm:p-4 lg:p-5 border-t border-brand-dark/10 bg-[#FDFBF7] space-y-2.5 lg:space-y-3 shrink-0"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={attachLectureRef}
-                      onChange={(e) => setAttachLectureRef(e.target.value)}
-                      className="px-3 py-1.5 rounded-full bg-white border border-brand-dark/15 text-xs font-semibold text-brand-dark max-w-[260px]"
-                    >
-                      <option value="">Attach lecture topic (optional)</option>
-                      {activeTrackData.lectures.map((lec) => {
-                        const label = `Lecture ${lec.lectureNumber} · ${lec.title}`;
-                        return (
-                          <option key={lec.id} value={label}>
-                            {label}
-                          </option>
-                        );
-                      })}
-                    </select>
+                  {/* Desktop Attachment Row (unchanged on lg+) */}
+                  <div className="hidden lg:flex flex-wrap items-center gap-2">
+                    {/* Custom Minimal Lecture Topic Popover */}
+                    <div className="relative" ref={lectureMenuRef}>
+                      <div className="inline-flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => setLectureMenuOpen((prev) => !prev)}
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border inline-flex items-center gap-2 transition-all max-w-[280px] ${
+                            attachLectureRef
+                              ? 'bg-[#EEF3FF] border-brand-accent/30 text-brand-accent'
+                              : 'bg-white border-brand-dark/12 text-brand-dark/70 hover:border-brand-dark/30 hover:text-brand-dark'
+                          }`}
+                        >
+                          <BookOpen size={12} className="shrink-0" />
+                          <span className="truncate">
+                            {attachLectureRef || 'Link lecture'}
+                          </span>
+                          <ChevronDown
+                            size={12}
+                            className={`shrink-0 transition-transform ${
+                              lectureMenuOpen ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
+                        {attachLectureRef && (
+                          <button
+                            type="button"
+                            onClick={() => setAttachLectureRef('')}
+                            aria-label="Clear linked lecture"
+                            className="ml-1 p-1 rounded-full text-brand-dark/45 hover:text-brand-dark hover:bg-brand-dark/5 transition-colors"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+
+                      {lectureMenuOpen && (
+                        <div className="absolute left-0 bottom-full mb-2 w-80 sm:w-96 rounded-2xl bg-white border border-brand-dark/10 shadow-[0_20px_48px_-12px_rgba(5,5,5,0.16)] overflow-hidden z-30">
+                          <div className="px-4 py-2.5 border-b border-brand-dark/5 flex items-center justify-between bg-brand-cream/60">
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-brand-dark/50">
+                              Link to lecture
+                            </span>
+                            {attachLectureRef && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAttachLectureRef('');
+                                  setLectureMenuOpen(false);
+                                }}
+                                className="text-[11px] font-semibold text-brand-dark/55 hover:text-brand-dark"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </div>
+                          <div className="max-h-60 overflow-y-auto divide-y divide-brand-dark/5">
+                            {activeTrackData.lectures.map((lec) => {
+                              const label = `Lecture ${lec.lectureNumber} · ${lec.title}`;
+                              const isSelected = attachLectureRef === label;
+                              return (
+                                <button
+                                  key={lec.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setAttachLectureRef(isSelected ? '' : label);
+                                    setLectureMenuOpen(false);
+                                  }}
+                                  className={`w-full px-4 py-3 text-left flex items-start justify-between gap-3 transition-colors ${
+                                    isSelected
+                                      ? 'bg-brand-cream text-brand-dark'
+                                      : 'hover:bg-brand-cream/50 text-brand-dark/80'
+                                  }`}
+                                >
+                                  <div className="flex items-baseline gap-2.5 min-w-0">
+                                    <span className="text-[11px] font-mono text-brand-accent font-bold shrink-0">
+                                      {lec.lectureNumber}
+                                    </span>
+                                    <span className="text-xs font-medium leading-snug">
+                                      {lec.title}
+                                    </span>
+                                  </div>
+                                  {isSelected && (
+                                    <Check size={13} className="text-brand-accent shrink-0 mt-0.5" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     <button
                       type="button"
                       onClick={() => setShowSnippetBox((prev) => !prev)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold border inline-flex items-center gap-1.5 transition-colors ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border inline-flex items-center gap-1.5 transition-colors ${
                         showSnippetBox
                           ? 'bg-brand-dark text-white border-brand-dark'
-                          : 'bg-white text-brand-dark/70 border-brand-dark/15 hover:border-brand-dark/35'
+                          : 'bg-white text-brand-dark/70 border-brand-dark/12 hover:border-brand-dark/30 hover:text-brand-dark'
                       }`}
                     >
-                      <Code2 size={13} /> {showSnippetBox ? 'Hide Snippet' : 'Attach Code / Notes'}
+                      <Code2 size={13} /> {showSnippetBox ? 'Hide snippet' : 'Code / notes'}
                     </button>
                   </div>
+
+                  {/* Mobile Attachment Tray (opened via + button) */}
+                  {mobileAttachOpen && (
+                    <div className="lg:hidden rounded-2xl bg-white border border-brand-dark/10 p-3 space-y-2.5 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-brand-dark/50">
+                          Attach to message
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowSnippetBox((prev) => !prev)}
+                          className={`px-3 py-1 rounded-full text-[11px] font-semibold border inline-flex items-center gap-1.5 ${
+                            showSnippetBox
+                              ? 'bg-brand-dark text-white border-brand-dark'
+                              : 'bg-brand-cream text-brand-dark/75 border-brand-dark/10'
+                          }`}
+                        >
+                          <Code2 size={12} /> {showSnippetBox ? 'Hide snippet' : 'Code / notes'}
+                        </button>
+                      </div>
+                      <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5">
+                        {activeTrackData.lectures.map((lec) => {
+                          const label = `Lecture ${lec.lectureNumber} · ${lec.title}`;
+                          const isSelected = attachLectureRef === label;
+                          return (
+                            <button
+                              key={lec.id}
+                              type="button"
+                              onClick={() => {
+                                setAttachLectureRef(isSelected ? '' : label);
+                                setMobileAttachOpen(false);
+                              }}
+                              className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
+                                isSelected
+                                  ? 'bg-[#EEF3FF] border-brand-accent/35 text-brand-accent font-bold'
+                                  : 'bg-brand-cream/70 border-brand-dark/10 text-brand-dark/75'
+                              }`}
+                            >
+                              Lec {lec.lectureNumber}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mobile Active Lecture Chip */}
+                  {attachLectureRef && (
+                    <div className="lg:hidden flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EEF3FF] border border-brand-accent/25 text-[11px] font-medium text-brand-accent max-w-full truncate">
+                        <BookOpen size={11} className="shrink-0" />
+                        <span className="truncate">{attachLectureRef}</span>
+                        <button
+                          type="button"
+                          onClick={() => setAttachLectureRef('')}
+                          aria-label="Remove lecture tag"
+                          className="ml-0.5 text-brand-accent/70 hover:text-brand-accent"
+                        >
+                          <X size={11} />
+                        </button>
+                      </span>
+                    </div>
+                  )}
 
                   {showSnippetBox && (
                     <textarea
@@ -514,7 +731,8 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                     />
                   )}
 
-                  <div className="flex gap-2.5 items-end">
+                  {/* Desktop Composer Row (unchanged) */}
+                  <div className="hidden lg:flex gap-2.5 items-end">
                     <textarea
                       rows={2}
                       value={draftBody}
@@ -537,6 +755,51 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                       className="px-6 py-3.5 bg-brand-dark text-white rounded-full text-xs font-bold hover:bg-brand-accent disabled:opacity-40 transition-colors inline-flex items-center gap-1.5 shrink-0"
                     >
                       <Send size={13} /> Send
+                    </button>
+                  </div>
+
+                  {/* Mobile Single-Row Pill Composer */}
+                  <div className="flex lg:hidden items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMobileAttachOpen((prev) => !prev)}
+                      aria-label="Attach lecture or code snippet"
+                      className={`w-10 h-10 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                        mobileAttachOpen || attachLectureRef || showSnippetBox
+                          ? 'bg-brand-dark text-white border-brand-dark'
+                          : 'bg-white text-brand-dark/70 border-brand-dark/15'
+                      }`}
+                    >
+                      <Plus
+                        size={17}
+                        className={`transition-transform duration-150 ${
+                          mobileAttachOpen ? 'rotate-45' : ''
+                        }`}
+                      />
+                    </button>
+                    <textarea
+                      rows={1}
+                      value={draftBody}
+                      onChange={(e) => setDraftBody(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder={
+                        activeConversation.kind === 'batch-channel'
+                          ? `Message ${activeConversation.batchCode}...`
+                          : `Message ${
+                              isMentorSide
+                                ? activeConversation.studentName.split(' ')[0]
+                                : activeConversation.mentorName.split(' ')[0]
+                            }...`
+                      }
+                      className="flex-1 px-4 py-2.5 rounded-full bg-white border border-brand-dark/15 text-sm text-brand-dark focus:outline-none focus:border-brand-accent resize-none leading-snug"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!draftBody.trim()}
+                      aria-label="Send message"
+                      className="w-10 h-10 rounded-full bg-brand-dark text-white flex items-center justify-center hover:bg-brand-accent disabled:opacity-35 transition-colors shrink-0"
+                    >
+                      <Send size={15} />
                     </button>
                   </div>
                 </form>

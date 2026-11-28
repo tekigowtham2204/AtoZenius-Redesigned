@@ -379,7 +379,7 @@ const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({
               value={announcementDraft}
               onChange={(e) => setAnnouncementDraft(e.target.value)}
               placeholder="e.g., New Offline Medical Coding & AI Full-Stack Batches Starting Next Monday"
-              className="flex-1 px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm text-brand-dark focus:outline-none focus:border-brand-accent"
+              className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm text-brand-dark focus:outline-none focus:border-brand-accent"
             />
             <button
               type="submit"

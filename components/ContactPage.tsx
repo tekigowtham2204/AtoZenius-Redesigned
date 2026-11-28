@@ -7,6 +7,7 @@ import {
   getSiteConfig,
   getWhatsappDigits,
 } from '../data/portal';
+import MinimalSelect from './ui/MinimalSelect';
 
 const contactFaqs = [
   {
@@ -219,17 +220,16 @@ const ContactPage: React.FC = () => {
                     <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">
                       Program of Interest
                     </label>
-                    <select
+                    <MinimalSelect
                       value={program}
-                      onChange={(e) => setProgram(e.target.value)}
-                      className="w-full px-4 py-3.5 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
-                    >
-                      {resolvedCourses.map((c) => (
-                        <option key={c.id} value={c.title}>
-                          {c.title}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setProgram}
+                      tone="cream"
+                      options={resolvedCourses.map((c) => ({
+                        value: c.title,
+                        label: c.title,
+                        meta: c.category,
+                      }))}
+                    />
                   </div>
                 </div>
 

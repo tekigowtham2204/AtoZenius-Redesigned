@@ -23,6 +23,7 @@ import {
   saveBatchOverride,
   toggleBatchStatus,
 } from '../../../data/portal';
+import MinimalSelect from '../../ui/MinimalSelect';
 
 interface StaffBatchesPageProps {
   embedded?: boolean;
@@ -210,21 +211,20 @@ const StaffBatchesPage: React.FC<StaffBatchesPageProps> = ({ embedded = false })
               <label className="block text-[10px] font-mono uppercase tracking-wider text-white/50 mb-1.5">
                 Course
               </label>
-              <select
+              <MinimalSelect
                 value={newCourseId}
-                onChange={(e) => setNewCourseId(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-sm font-semibold text-white focus:outline-none focus:border-[#60A5FA]"
-              >
-                {allCourses.map((c) => {
+                onChange={setNewCourseId}
+                tone="dark"
+                options={allCourses.map((c) => {
                   const count = getCohortsForCourse(c.id).length;
-                  return (
-                    <option key={c.id} value={c.id} className="text-brand-dark">
-                      {c.title} · {count > 0 ? `${count} running` : 'No batch yet'}
-                      {c.isHidden ? ' (Hidden)' : ''}
-                    </option>
-                  );
+                  const statusMeta = count > 0 ? `${count} running` : 'No batch';
+                  return {
+                    value: c.id,
+                    label: c.title,
+                    meta: c.isHidden ? `${statusMeta} · Hidden` : statusMeta,
+                  };
                 })}
-              </select>
+              />
             </div>
             <div>
               <label className="block text-[10px] font-mono uppercase tracking-wider text-white/50 mb-1.5">
@@ -387,17 +387,16 @@ const StaffBatchesPage: React.FC<StaffBatchesPageProps> = ({ embedded = false })
             <label className="block text-xs font-mono uppercase tracking-wider text-brand-dark/55 mb-2">
               Linked Course
             </label>
-            <select
+            <MinimalSelect
               value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-              className="w-full px-4 py-3.5 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm font-semibold focus:outline-none focus:border-brand-accent"
-            >
-              {allCourses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title} ({c.category}) {c.isHidden ? '— Hidden' : ''}
-                </option>
-              ))}
-            </select>
+              onChange={setCourseId}
+              tone="cream"
+              options={allCourses.map((c) => ({
+                value: c.id,
+                label: c.title,
+                meta: c.isHidden ? `${c.category} · Hidden` : c.category,
+              }))}
+            />
           </div>
           <div>
             <label className="block text-xs font-mono uppercase tracking-wider text-brand-dark/55 mb-2">

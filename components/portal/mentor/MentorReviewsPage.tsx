@@ -146,7 +146,7 @@ const MentorReviewsPage: React.FC<MentorReviewsPageProps> = ({ session, onSelect
                     placeholder="Write feedback or approval note..."
                     className="w-full p-3 rounded-xl bg-white border border-brand-dark/15 text-xs focus:outline-none focus:border-brand-accent"
                   />
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       type="button"
                       onClick={() =>

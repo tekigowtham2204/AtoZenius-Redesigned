@@ -118,7 +118,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 value={batchCodeInput}
                 onChange={(e) => setBatchCodeInput(e.target.value)}
                 placeholder="Enter code (e.g. FS-08)"
-                className="flex-1 px-4 py-3.5 rounded-full bg-white/10 border border-white/15 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#60A5FA]"
+                className="flex-1 min-w-0 px-4 py-3.5 rounded-full bg-white/10 border border-white/15 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#60A5FA]"
               />
               <button
                 type="submit"

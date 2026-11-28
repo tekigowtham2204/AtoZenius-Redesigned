@@ -10,6 +10,7 @@ import {
   PortalTrackId,
   postBatchThread,
 } from '../../../data/portal';
+import MinimalSelect from '../../ui/MinimalSelect';
 
 interface StaffPlacementsPageProps {
   embedded?: boolean;
@@ -107,20 +108,19 @@ const StaffPlacementsPage: React.FC<StaffPlacementsPageProps> = ({ embedded = fa
               <label className="block text-xs font-mono uppercase tracking-wider text-brand-dark/55 mb-2">
                 Completed Program &amp; Batch
               </label>
-              <select
+              <MinimalSelect
                 value={certTrackId}
-                onChange={(e) => setCertTrackId(e.target.value as PortalTrackId)}
-                className="w-full px-4 py-3.5 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
-              >
-                {getActiveTrackIds().map((id) => {
+                onChange={(val) => setCertTrackId(val as PortalTrackId)}
+                tone="cream"
+                options={getActiveTrackIds().map((id) => {
                   const t = getResolvedTrackData(id);
-                  return (
-                    <option key={id} value={id}>
-                      {t.courseTitle} ({t.batchCode})
-                    </option>
-                  );
+                  return {
+                    value: id,
+                    label: t.courseTitle,
+                    meta: t.batchCode,
+                  };
                 })}
-              </select>
+              />
             </div>
 
             <button
@@ -157,20 +157,19 @@ const StaffPlacementsPage: React.FC<StaffPlacementsPageProps> = ({ embedded = fa
               <label className="block text-xs font-mono uppercase tracking-wider text-white/55 mb-2">
                 Target Cohort
               </label>
-              <select
+              <MinimalSelect
                 value={alertTrackId}
-                onChange={(e) => setAlertTrackId(e.target.value as PortalTrackId)}
-                className="w-full px-4 py-3.5 rounded-xl bg-white/10 border border-white/15 text-sm text-white focus:outline-none focus:border-[#60A5FA]"
-              >
-                {getActiveTrackIds().map((id) => {
+                onChange={(val) => setAlertTrackId(val as PortalTrackId)}
+                tone="dark"
+                options={getActiveTrackIds().map((id) => {
                   const t = getResolvedTrackData(id);
-                  return (
-                    <option key={id} value={id} className="text-brand-dark">
-                      {t.batchCode} · {t.courseTitle}
-                    </option>
-                  );
+                  return {
+                    value: id,
+                    label: t.courseTitle,
+                    meta: t.batchCode,
+                  };
                 })}
-              </select>
+              />
             </div>
 
             <input
