@@ -17,6 +17,16 @@ import ContactPage from './components/ContactPage';
 import PlacementsPage from './components/PlacementsPage';
 import CompanyCareersPage from './components/CompanyCareersPage';
 import InfoPage, { InfoPageType } from './components/InfoPage';
+import DashboardPage from './components/portal/DashboardPage';
+import NotesPage from './components/portal/NotesPage';
+import ProjectsPage from './components/portal/ProjectsPage';
+import CommunityPage from './components/portal/CommunityPage';
+import {
+  getSavedSession,
+  PortalTrackId,
+  saveSession,
+  StudentSession,
+} from './data/portal';
 import { ViewState } from './types';
 
 const infoViews: InfoPageType[] = [
@@ -27,12 +37,15 @@ const infoViews: InfoPageType[] = [
   'terms',
 ];
 
+const portalViews: ViewState[] = ['dashboard', 'notes', 'projects', 'community'];
+
 const BASE_PATH = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
 const pathToView = (path: string): ViewState => {
-  const withoutBase = BASE_PATH && path.toLowerCase().startsWith(BASE_PATH.toLowerCase())
-    ? path.slice(BASE_PATH.length)
-    : path;
+  const withoutBase =
+    BASE_PATH && path.toLowerCase().startsWith(BASE_PATH.toLowerCase())
+      ? path.slice(BASE_PATH.length)
+      : path;
   const normalized = withoutBase.toLowerCase().replace(/\/+$/, '') || '/';
   if (normalized === '/courses') return 'courses';
   if (normalized === '/mentors') return 'mentors';
@@ -49,6 +62,10 @@ const pathToView = (path: string): ViewState => {
   if (normalized === '/refund-policy') return 'refund-policy';
   if (normalized === '/privacy-policy') return 'privacy-policy';
   if (normalized === '/terms') return 'terms';
+  if (normalized === '/dashboard') return 'dashboard';
+  if (normalized === '/notes') return 'notes';
+  if (normalized === '/projects') return 'projects';
+  if (normalized === '/community') return 'community';
   return 'landing';
 };
 
@@ -70,6 +87,10 @@ const viewToPath = (view: ViewState): string => {
     case 'refund-policy': route = '/refund-policy'; break;
     case 'privacy-policy': route = '/privacy-policy'; break;
     case 'terms': route = '/terms'; break;
+    case 'dashboard': route = '/dashboard'; break;
+    case 'notes': route = '/notes'; break;
+    case 'projects': route = '/projects'; break;
+    case 'community': route = '/community'; break;
     case 'landing':
     default: route = '/'; break;
   }
@@ -77,7 +98,7 @@ const viewToPath = (view: ViewState): string => {
 };
 
 const viewTitles: Record<ViewState, string> = {
-  landing: 'AtoZenius - Career Ecosystem',
+  landing: 'AtoZenius — Learn Better. Achieve Faster.',
   courses: 'Courses - AtoZenius',
   mentors: 'Mentors - AtoZenius',
   careers: 'Careers - AtoZenius',
@@ -93,29 +114,53 @@ const viewTitles: Record<ViewState, string> = {
   'refund-policy': 'Refund Policy - AtoZenius',
   'privacy-policy': 'Privacy Policy - AtoZenius',
   terms: 'Terms & Conditions - AtoZenius',
+  dashboard: 'Student Dashboard - AtoZenius',
+  notes: 'Personalized Study Notes - AtoZenius',
+  projects: 'Projects & Certificates - AtoZenius',
+  community: 'Batch Community - AtoZenius',
 };
 
 const App: React.FC = () => {
+  const [session, setSession] = useState<StudentSession | null>(() => {
+    if (typeof window !== 'undefined') {
+      return getSavedSession();
+    }
+    return null;
+  });
+
   const [currentView, setCurrentView] = useState<ViewState>(() => {
     if (typeof window !== 'undefined') {
-      return pathToView(window.location.pathname);
+      const requested = pathToView(window.location.pathname);
+      const saved = getSavedSession();
+      if (portalViews.includes(requested) && !saved) {
+        return 'auth';
+      }
+      return requested;
     }
     return 'landing';
   });
 
-  // Update title and handle browser back/forward buttons (popstate)
+  const [activeLectureId, setActiveLectureId] = useState<string | null>(null);
+  const [communityTopicPrefill, setCommunityTopicPrefill] = useState<string | null>(null);
+
   useEffect(() => {
     document.title = viewTitles[currentView];
   }, [currentView]);
 
   useEffect(() => {
-    // Set initial history state if not already set
-    const initialView = pathToView(window.location.pathname);
+    const requested = pathToView(window.location.pathname);
+    const initialView =
+      portalViews.includes(requested) && !getSavedSession() ? 'auth' : requested;
     window.history.replaceState({ view: initialView }, '', viewToPath(initialView));
 
     const handlePopState = (event: PopStateEvent) => {
-      const nextView = event.state?.view || pathToView(window.location.pathname);
-      setCurrentView(nextView);
+      const nextView: ViewState =
+        event.state?.view || pathToView(window.location.pathname);
+      if (portalViews.includes(nextView) && !getSavedSession()) {
+        setCurrentView('auth');
+      } else {
+        setCurrentView(nextView);
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -123,32 +168,82 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const handleOpenAuth = () => {
-    navigateTo('auth');
+  const navigateTo = (view: ViewState) => {
+    const resolvedView =
+      portalViews.includes(view) && !session ? 'auth' : view;
+    const targetPath = viewToPath(resolvedView);
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({ view: resolvedView }, '', targetPath);
+    }
+    setCurrentView(resolvedView);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const navigateTo = (view: ViewState) => {
-    const targetPath = viewToPath(view);
+  const handleOpenAuth = () => {
+    navigateTo(session ? 'dashboard' : 'auth');
+  };
+
+  const handleLogin = (newSession: StudentSession) => {
+    saveSession(newSession);
+    setSession(newSession);
+    setActiveLectureId(null);
+    setCommunityTopicPrefill(null);
+    const targetPath = viewToPath('dashboard');
     if (window.location.pathname !== targetPath) {
-      window.history.pushState({ view }, '', targetPath);
+      window.history.pushState({ view: 'dashboard' }, '', targetPath);
     }
-    setCurrentView(view);
+    setCurrentView('dashboard');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSwitchTrack = (trackId: PortalTrackId) => {
+    if (!session) return;
+    const updated: StudentSession = { ...session, trackId };
+    saveSession(updated);
+    setSession(updated);
+    setActiveLectureId(null);
+    setCommunityTopicPrefill(null);
+  };
+
+  const handleLogout = () => {
+    saveSession(null);
+    setSession(null);
+    setActiveLectureId(null);
+    setCommunityTopicPrefill(null);
+    const targetPath = viewToPath('landing');
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({ view: 'landing' }, '', targetPath);
+    }
+    setCurrentView('landing');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenLecture = (lectureId: string) => {
+    setActiveLectureId(lectureId);
+    navigateTo('notes');
+  };
+
+  const handleAskDoubtFromNote = (lectureLabel: string) => {
+    setCommunityTopicPrefill(lectureLabel);
+    navigateTo('community');
   };
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-brand-cream text-brand-dark relative font-sans selection:bg-brand-dark selection:text-brand-accent">
       <AnimatedBackground />
-      
+
       <div className="relative z-10">
         {currentView !== 'auth' && (
-          <Navbar 
-            onOpenAuth={handleOpenAuth} 
+          <Navbar
+            onOpenAuth={handleOpenAuth}
             currentView={currentView}
             onNavigate={navigateTo}
+            session={session}
+            onSwitchTrack={handleSwitchTrack}
+            onLogout={handleLogout}
           />
         )}
-        
+
         <main>
           <AnimatePresence mode="wait">
             {currentView === 'landing' && (
@@ -156,51 +251,46 @@ const App: React.FC = () => {
                 <Hero onOpenAuth={handleOpenAuth} onNavigate={navigateTo} />
                 <ContentBlock />
                 <Features onNavigate={navigateTo} />
-                
+
                 {/* CTA Section */}
                 <section className="py-24 md:py-40 relative overflow-hidden">
                   <div className="absolute inset-0 bg-brand-accent/5" />
                   <div className="container mx-auto px-6 text-center relative z-10">
-                      <h2 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 md:mb-8 text-brand-dark tracking-tighter">Ready to start <span className="text-brand-accent">your journey?</span></h2>
-                      <p className="text-base md:text-xl font-medium text-brand-dark/60 mb-8 md:mb-12 max-w-2xl mx-auto">Master in-demand engineering skills, train alongside industry mentors, and step into careers built for your talent.</p>
-                      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <button 
-                          onClick={() => navigateTo('courses')}
-                          className="px-10 md:px-12 py-4 md:py-5 bg-brand-dark text-brand-cream rounded-full font-bold text-sm uppercase tracking-widest hover:bg-brand-accent hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto"
-                        >
-                          Explore Courses
-                        </button>
-                        <button 
-                          onClick={handleOpenAuth}
-                          className="px-10 md:px-12 py-4 md:py-5 bg-transparent border-2 border-brand-dark/15 text-brand-dark rounded-full font-bold text-sm uppercase tracking-widest hover:border-brand-dark/40 transition-all duration-300 w-full sm:w-auto"
-                        >
-                          Get Started
-                        </button>
-                      </div>
+                    <h2 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 md:mb-8 text-brand-dark tracking-tighter">
+                      Ready to start <span className="text-brand-accent">your journey?</span>
+                    </h2>
+                    <p className="text-base md:text-xl font-medium text-brand-dark/60 mb-8 md:mb-12 max-w-2xl mx-auto">
+                      Master in-demand skills, train alongside industry mentors, and step into careers built on verified proof.
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                      <button
+                        onClick={() => navigateTo('courses')}
+                        className="px-10 md:px-12 py-4 md:py-5 bg-brand-dark text-brand-cream rounded-full font-bold text-sm uppercase tracking-widest hover:bg-brand-accent hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto"
+                      >
+                        Explore Courses
+                      </button>
+                      <button
+                        onClick={handleOpenAuth}
+                        className="px-10 md:px-12 py-4 md:py-5 bg-transparent border-2 border-brand-dark/15 text-brand-dark rounded-full font-bold text-sm uppercase tracking-widest hover:border-brand-dark/40 transition-all duration-300 w-full sm:w-auto"
+                      >
+                        {session ? 'Open Portal' : 'Get Started'}
+                      </button>
+                    </div>
                   </div>
                 </section>
               </React.Fragment>
             )}
-            
+
             {currentView === 'courses' && (
-              <CoursesPage
-                key="courses"
-                onOpenAuth={handleOpenAuth}
-              />
+              <CoursesPage key="courses" onOpenAuth={handleOpenAuth} />
             )}
 
             {currentView === 'mentors' && (
-              <MentorsPage
-                key="mentors"
-                onOpenAuth={handleOpenAuth}
-              />
+              <MentorsPage key="mentors" onOpenAuth={handleOpenAuth} />
             )}
 
             {currentView === 'careers' && (
-              <CareersPage
-                key="careers"
-                onOpenAuth={handleOpenAuth}
-              />
+              <CareersPage key="careers" onOpenAuth={handleOpenAuth} />
             )}
 
             {currentView === 'about' && (
@@ -220,15 +310,10 @@ const App: React.FC = () => {
             )}
 
             {currentView === 'blog' && (
-              <BlogPage
-                key="blog"
-                onNavigate={navigateTo}
-              />
+              <BlogPage key="blog" onNavigate={navigateTo} />
             )}
 
-            {currentView === 'contact' && (
-              <ContactPage key="contact" />
-            )}
+            {currentView === 'contact' && <ContactPage key="contact" />}
 
             {currentView === 'placements' && (
               <PlacementsPage
@@ -239,16 +324,44 @@ const App: React.FC = () => {
             )}
 
             {currentView === 'company-careers' && (
-              <CompanyCareersPage
-                key="company-careers"
-                onNavigate={navigateTo}
-              />
+              <CompanyCareersPage key="company-careers" onNavigate={navigateTo} />
             )}
 
             {currentView === 'auth' && (
               <AuthModal
                 key="auth"
                 onNavigate={navigateTo}
+                onLogin={handleLogin}
+              />
+            )}
+
+            {currentView === 'dashboard' && session && (
+              <DashboardPage
+                key="dashboard"
+                session={session}
+                onNavigate={navigateTo}
+                onOpenLecture={handleOpenLecture}
+              />
+            )}
+
+            {currentView === 'notes' && session && (
+              <NotesPage
+                key="notes"
+                session={session}
+                initialLectureId={activeLectureId}
+                onAskDoubt={handleAskDoubtFromNote}
+              />
+            )}
+
+            {currentView === 'projects' && session && (
+              <ProjectsPage key="projects" session={session} />
+            )}
+
+            {currentView === 'community' && session && (
+              <CommunityPage
+                key="community"
+                session={session}
+                prefillLecture={communityTopicPrefill}
               />
             )}
 
@@ -261,8 +374,12 @@ const App: React.FC = () => {
             )}
           </AnimatePresence>
         </main>
-        
-        {currentView !== 'auth' && <Footer onNavigate={navigateTo} />}
+
+        {currentView !== 'auth' && (
+          <div className="print:hidden">
+            <Footer onNavigate={navigateTo} />
+          </div>
+        )}
       </div>
     </div>
   );

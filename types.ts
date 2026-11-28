@@ -14,4 +14,8 @@ export type ViewState =
   | 'help-center'
   | 'refund-policy'
   | 'privacy-policy'
-  | 'terms';
+  | 'terms'
+  | 'dashboard'
+  | 'notes'
+  | 'projects'
+  | 'community';

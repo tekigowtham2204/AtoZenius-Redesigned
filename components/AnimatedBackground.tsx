@@ -95,7 +95,7 @@ const AnimatedBackground: React.FC = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-0 bg-brand-cream pointer-events-none overflow-hidden">
+    <div className="print:hidden fixed inset-0 z-0 bg-brand-cream pointer-events-none overflow-hidden">
       {/* Soft Gradient Overlay to blend lines */}
       <div className="absolute inset-0 bg-gradient-to-b from-brand-cream via-transparent to-brand-cream opacity-80" />
       
