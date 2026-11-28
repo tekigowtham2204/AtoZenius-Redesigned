@@ -136,14 +136,6 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      navigateTo('landing');
-    }
-  };
-
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-brand-cream text-brand-dark relative font-sans selection:bg-brand-dark selection:text-brand-accent">
       <AnimatedBackground />

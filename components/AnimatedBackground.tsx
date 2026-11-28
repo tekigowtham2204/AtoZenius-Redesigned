@@ -18,6 +18,8 @@ const AnimatedBackground: React.FC = () => {
     const lines = 18; // Fewer lines for a cleaner look
     const verticalSpacing = height / 1.5 / lines;
     
+    let animationId = 0;
+
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
       
@@ -68,10 +70,10 @@ const AnimatedBackground: React.FC = () => {
       }
 
       frame++;
-      requestAnimationFrame(draw);
+      animationId = requestAnimationFrame(draw);
     };
 
-    const animationId = requestAnimationFrame(draw);
+    animationId = requestAnimationFrame(draw);
 
     const handleResize = () => {
       width = canvas.width = window.innerWidth;

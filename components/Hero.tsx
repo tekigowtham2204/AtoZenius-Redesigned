@@ -6,13 +6,10 @@ import { ViewState } from '../types';
 interface HeroProps {
   onOpenAuth: () => void;
   onNavigate?: (view: ViewState) => void;
-  isInitial?: boolean;
 }
 
-const Hero: React.FC<HeroProps> = ({ onOpenAuth, onNavigate, isInitial = false }) => {
+const Hero: React.FC<HeroProps> = ({ onOpenAuth, onNavigate }) => {
   const smoothEase = [0.25, 0.1, 0.25, 1.0];
-  const delayOffset = isInitial ? 1.5 : 0;
-  const animDuration = isInitial ? 1.2 : 0.45;
 
   const scrollToContent = () => {
     const element = document.getElementById('insights');
@@ -34,9 +31,9 @@ const Hero: React.FC<HeroProps> = ({ onOpenAuth, onNavigate, isInitial = false }
     <section className="relative min-h-[100svh] flex items-center justify-center pt-24 md:pt-20 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto text-center z-10 flex flex-col items-center">
         <motion.div
-          initial={{ opacity: 0, y: isInitial ? 40 : 20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: animDuration, delay: delayOffset + (isInitial ? 0.2 : 0.05), ease: smoothEase }}
+          transition={{ duration: 0.45, delay: 0.05, ease: smoothEase }}
           className="w-full"
         >
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-9xl font-extrabold text-brand-dark leading-[1.1] md:leading-[1.05] mb-6 md:mb-8 tracking-tighter">
@@ -45,18 +42,18 @@ const Hero: React.FC<HeroProps> = ({ onOpenAuth, onNavigate, isInitial = false }
         </motion.div>
 
         <motion.p
-          initial={{ opacity: 0, y: isInitial ? 30 : 15 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: animDuration, delay: delayOffset + (isInitial ? 0.4 : 0.1), ease: smoothEase }}
+          transition={{ duration: 0.45, delay: 0.1, ease: smoothEase }}
           className="text-base sm:text-lg md:text-xl text-brand-dark/70 max-w-xl md:max-w-2xl mx-auto mb-10 md:mb-16 font-medium leading-relaxed px-2"
         >
           <span className="font-bold text-brand-dark">Learn Better. Achieve Faster.</span> Practical courses across IT, Pharma, Management &amp; Agriculture—backed by 1-on-1 industry mentors, internships, and career placement support.
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0, y: isInitial ? 30 : 15 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: animDuration, delay: delayOffset + (isInitial ? 0.6 : 0.15), ease: smoothEase }}
+          transition={{ duration: 0.45, delay: 0.15, ease: smoothEase }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 w-full sm:w-auto px-4 sm:px-0"
         >
           <button 
@@ -79,7 +76,7 @@ const Hero: React.FC<HeroProps> = ({ onOpenAuth, onNavigate, isInitial = false }
         className="absolute bottom-6 md:bottom-12 left-1/2 transform -translate-x-1/2 cursor-pointer p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1, y: [0, 10, 0] }}
-        transition={{ duration: isInitial ? 2 : 1, delay: isInitial ? 3 : 0.3, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 1, delay: 0.3, repeat: Infinity, ease: "easeInOut" }}
         onClick={scrollToContent}
       >
         <ChevronDown className="text-brand-dark/30" size={24} />
