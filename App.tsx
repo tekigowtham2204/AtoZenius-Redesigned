@@ -260,6 +260,14 @@ const viewTitles: Record<ViewState, string> = {
   'admin-operations': 'Operations - AtoZenius',
 };
 
+const resolveInitialView = (pathname: string, savedSession: PortalSession | null): ViewState => {
+  const requested = pathToView(pathname);
+  if (savedSession && (requested === 'landing' || requested === 'auth')) {
+    return roleHome(savedSession.role, savedSession);
+  }
+  return guardViewForSession(requested, savedSession);
+};
+
 const App: React.FC = () => {
   const [session, setSession] = useState<PortalSession | null>(() => {
     if (typeof window !== 'undefined') {
@@ -270,7 +278,7 @@ const App: React.FC = () => {
 
   const [currentView, setCurrentView] = useState<ViewState>(() => {
     if (typeof window !== 'undefined') {
-      return guardViewForSession(pathToView(window.location.pathname), getSavedSession());
+      return resolveInitialView(window.location.pathname, getSavedSession());
     }
     return 'landing';
   });
@@ -285,8 +293,8 @@ const App: React.FC = () => {
   }, [currentView]);
 
   useEffect(() => {
-    const initialView = guardViewForSession(
-      pathToView(window.location.pathname),
+    const initialView = resolveInitialView(
+      window.location.pathname,
       getSavedSession()
     );
     window.history.replaceState({ view: initialView }, '', viewToPath(initialView));

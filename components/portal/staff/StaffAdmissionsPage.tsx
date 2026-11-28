@@ -408,17 +408,23 @@ const StaffAdmissionsPage: React.FC<StaffAdmissionsPageProps> = ({ embedded = fa
                   )}
 
                   {provisioned && (
-                    <div className="mb-4 p-3.5 rounded-xl bg-[#EEF3FF] border border-brand-accent/20 flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <div className="font-mono text-brand-dark">
-                        <KeyRound size={12} className="inline mr-1.5 text-brand-accent" />
-                        Temp Password:{' '}
-                        <strong className="text-brand-accent">{provisioned.tempPassword}</strong> ·{' '}
-                        {provisioned.batchCode} ({provisioned.status})
+                    <div className="mb-4 p-3.5 rounded-xl bg-[#EEF3FF] border border-brand-accent/20 flex items-center justify-between gap-3 text-xs">
+                      <div className="font-mono text-brand-dark min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <KeyRound size={12} className="text-brand-accent shrink-0" />
+                          <span>Temp Password:</span>
+                          <strong className="text-brand-accent">{provisioned.tempPassword}</strong>
+                        </div>
+                        <div className="text-[11px] text-brand-dark/65 flex items-center gap-1.5 flex-wrap">
+                          <span className="whitespace-nowrap">{provisioned.batchCode}</span>
+                          <span>·</span>
+                          <span>{provisioned.status}</span>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleCopyCreds(provisioned)}
-                        className="font-bold text-brand-dark/75 hover:text-brand-accent inline-flex items-center gap-1"
+                        className="shrink-0 px-3 py-1.5 rounded-full bg-white border border-brand-accent/20 font-bold text-brand-dark/80 hover:text-brand-accent hover:border-brand-accent/40 inline-flex items-center gap-1.5 transition-colors"
                       >
                         <Copy size={12} /> {copiedId === provisioned.id ? 'Copied' : 'Copy'}
                       </button>
@@ -426,7 +432,7 @@ const StaffAdmissionsPage: React.FC<StaffAdmissionsPageProps> = ({ embedded = fa
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-brand-dark/10 flex flex-wrap gap-4 text-xs text-brand-dark/60 font-mono">
+                <div className="pt-3 border-t border-brand-dark/10 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-brand-dark/60 font-mono break-all">
                   <span>{lead.email}</span>
                   <span>{lead.phone}</span>
                 </div>

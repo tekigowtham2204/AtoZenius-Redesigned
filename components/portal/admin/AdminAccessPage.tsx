@@ -75,7 +75,6 @@ const AdminAccessPage: React.FC = () => {
     getDefaultPermissionsForRole('staff')
   );
   const [showCustomPerms, setShowCustomPerms] = useState(false);
-  const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
 
   // Inline Edit Team Member State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -248,7 +247,6 @@ const AdminAccessPage: React.FC = () => {
                           type="button"
                           onClick={() => {
                             handleNewRoleChange(roleKey);
-                            setBatchDropdownOpen(false);
                           }}
                           className={`pb-2.5 text-xs font-bold transition-all border-b-2 -mb-px ${
                             isSelected
@@ -270,52 +268,20 @@ const AdminAccessPage: React.FC = () => {
                   {memberRole === 'mentor' ? 'Assigned batch' : 'Title (optional)'}
                 </label>
                 {memberRole === 'mentor' ? (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setBatchDropdownOpen((prev) => !prev)}
-                      className="w-full px-4 py-3 rounded-2xl bg-brand-cream/70 border border-brand-dark/10 text-xs font-bold text-brand-dark flex items-center justify-between gap-2 hover:border-brand-dark/30 transition-colors"
-                    >
-                      <span className="truncate">
-                        {getResolvedTrackData(memberTrack).batchCode} ·{' '}
-                        {getResolvedTrackData(memberTrack).courseTitle}
-                      </span>
-                      <ChevronDown
-                        size={14}
-                        className={`text-brand-dark/50 shrink-0 transition-transform ${
-                          batchDropdownOpen ? 'rotate-180' : ''
-                        }`}
-                      />
-                    </button>
-                    {batchDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1.5 rounded-2xl bg-white border border-brand-dark/12 shadow-xl overflow-hidden z-30 divide-y divide-brand-dark/5">
-                        {activeTrackIds.map((id) => {
-                          const t = getResolvedTrackData(id);
-                          const selected = id === memberTrack;
-                          return (
-                            <button
-                              key={id}
-                              type="button"
-                              onClick={() => {
-                                setMemberTrack(id);
-                                setBatchDropdownOpen(false);
-                              }}
-                              className={`w-full px-4 py-2.5 text-left text-xs flex items-center justify-between transition-colors ${
-                                selected
-                                  ? 'bg-brand-cream font-bold text-brand-dark'
-                                  : 'text-brand-dark/70 hover:bg-brand-cream/50'
-                              }`}
-                            >
-                              <span className="truncate">
-                                {t.batchCode} · {t.courseTitle}
-                              </span>
-                              {selected && <Check size={13} className="text-brand-accent shrink-0" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                  <MinimalSelect
+                    value={memberTrack}
+                    ariaLabel="Assigned batch"
+                    tone="cream"
+                    onChange={(val) => setMemberTrack(val as PortalTrackId)}
+                    options={activeTrackIds.map((id) => {
+                      const t = getResolvedTrackData(id);
+                      return {
+                        value: id,
+                        label: t.batchCode,
+                        meta: t.courseTitle,
+                      };
+                    })}
+                  />
                 ) : (
                   <input
                     type="text"
@@ -683,13 +649,14 @@ const AdminAccessPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2.5">
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2.5 w-full lg:w-auto min-w-0">
                       <MinimalSelect
                         value={st.trackId}
                         ariaLabel={`Batch for ${st.name}`}
                         tone="light"
                         size="sm"
                         align="right"
+                        className="w-full sm:w-auto"
                         onChange={(val) => {
                           setStudents(
                             updateProvisionedStudentBatch(st.id, val as PortalTrackId)
@@ -706,52 +673,54 @@ const AdminAccessPage: React.FC = () => {
                         })}
                       />
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStudents(resetProvisionedStudentPassword(st.id));
-                          flash(`Reset password for ${st.name}`);
-                        }}
-                        className="px-3.5 py-2 rounded-full bg-white border border-brand-dark/15 text-xs font-bold text-brand-dark hover:border-brand-dark/40 inline-flex items-center gap-1.5"
-                      >
-                        <RefreshCw size={12} /> Reset Code
-                      </button>
+                      <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStudents(resetProvisionedStudentPassword(st.id));
+                            flash(`Reset password for ${st.name}`);
+                          }}
+                          className="px-3.5 py-2 rounded-full bg-white border border-brand-dark/15 text-xs font-bold text-brand-dark hover:border-brand-dark/40 inline-flex items-center justify-center gap-1.5"
+                        >
+                          <RefreshCw size={12} /> Reset Code
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleCopyCredentials(st)}
-                        className="px-3.5 py-2 rounded-full bg-white border border-brand-dark/15 text-xs font-bold text-brand-dark hover:border-brand-dark/40 inline-flex items-center gap-1.5"
-                      >
-                        <Copy size={12} /> Copy
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCredentials(st)}
+                          className="px-3.5 py-2 rounded-full bg-white border border-brand-dark/15 text-xs font-bold text-brand-dark hover:border-brand-dark/40 inline-flex items-center justify-center gap-1.5"
+                        >
+                          <Copy size={12} /> Copy
+                        </button>
 
-                      <a
-                        href={waUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3.5 py-2 rounded-full bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 inline-flex items-center gap-1.5"
-                      >
-                        <MessageCircle size={12} /> WhatsApp
-                      </a>
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3.5 py-2 rounded-full bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 inline-flex items-center justify-center gap-1.5"
+                        >
+                          <MessageCircle size={12} /> WhatsApp
+                        </a>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStudents(toggleProvisionedStudentStatus(st.id));
-                          flash(
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStudents(toggleProvisionedStudentStatus(st.id));
+                            flash(
+                              st.status === 'Active'
+                                ? `Paused access for ${st.name}`
+                                : `Restored access for ${st.name}`
+                            );
+                          }}
+                          className={`px-3.5 py-2 rounded-full text-xs font-bold border inline-flex items-center justify-center ${
                             st.status === 'Active'
-                              ? `Paused access for ${st.name}`
-                              : `Restored access for ${st.name}`
-                          );
-                        }}
-                        className={`px-3.5 py-2 rounded-full text-xs font-bold ${
-                          st.status === 'Active'
-                            ? 'text-red-600 hover:bg-red-50'
-                            : 'text-emerald-700 hover:bg-emerald-50'
-                        }`}
-                      >
-                        {st.status === 'Active' ? 'Pause' : 'Restore'}
-                      </button>
+                              ? 'bg-white border-red-200 text-red-600 hover:bg-red-50'
+                              : 'bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                          }`}
+                        >
+                          {st.status === 'Active' ? 'Pause' : 'Restore'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
