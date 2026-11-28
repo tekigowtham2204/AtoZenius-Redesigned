@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Mail, Lock, User, Check, MessageCircle } from 'lucide-react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  Eye,
+  EyeOff,
+  MessageCircle,
+} from 'lucide-react';
 import { ViewState } from '../types';
 import {
   addAdmissionsLead,
@@ -16,10 +23,10 @@ interface AuthModalProps {
   onLogin: (session: PortalSession) => void;
 }
 
-const trackOptions: { id: PortalTrackId; label: string; batch: string }[] = [
-  { id: 'ai-full-stack', label: 'AI Full-Stack Development', batch: 'Batch #FS-08' },
-  { id: 'advanced-medical-coding', label: 'Advanced Medical Coding', batch: 'Batch #MC-14' },
-  { id: 'data-science-analytics', label: 'Data Science & Analytics', batch: 'Batch #DS-11' },
+const trackOptions: { id: PortalTrackId; code: string; shortLabel: string }[] = [
+  { id: 'ai-full-stack', code: 'FS-08', shortLabel: 'AI Full-Stack' },
+  { id: 'advanced-medical-coding', code: 'MC-14', shortLabel: 'Medical Coding' },
+  { id: 'data-science-analytics', code: 'DS-11', shortLabel: 'Data Science' },
 ];
 
 const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
@@ -27,12 +34,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<PortalTrackId>('ai-full-stack');
   const [agreed, setAgreed] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
+  const switchMode = (loginMode: boolean) => {
+    setIsLogin(loginMode);
     setErrorMessage(null);
   };
 
@@ -99,30 +107,36 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
     setErrorMessage(null);
   };
 
-  const fadeVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.45 } },
-    exit: { opacity: 0, transition: { duration: 0.15 } },
-  };
-
   return (
     <motion.div
-      className="min-h-screen flex flex-col md:flex-row bg-brand-cream w-full"
+      className="min-h-screen flex flex-col lg:flex-row bg-brand-cream w-full"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.15 } }}
     >
-      {/* Left Panel - Brand Section */}
-      <div className="hidden md:flex w-[45%] lg:w-[40%] bg-brand-dark flex-col justify-between p-12 text-white relative overflow-hidden shrink-0">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-brand-accent/20 rounded-full blur-3xl -ml-20 -mb-20" />
-
-        <motion.div
-          variants={fadeVariants}
-          initial="hidden"
-          animate="visible"
-          className="relative z-10"
+      {/* Left Architectural Showcase Panel */}
+      <div className="hidden lg:flex w-[44%] bg-[#0A0B0E] flex-col justify-between p-12 xl:p-14 text-white relative overflow-hidden shrink-0">
+        {/* Hairline Radial Geometry */}
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 400 400"
+          className="absolute -right-24 -top-24 w-[420px] h-[420px] pointer-events-none opacity-30"
         >
+          <circle cx="200" cy="200" r="180" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+          <circle
+            cx="200"
+            cy="200"
+            r="125"
+            fill="none"
+            stroke="rgba(37,99,235,0.45)"
+            strokeWidth="1"
+            strokeDasharray="4 6"
+          />
+          <line x1="20" y1="200" x2="380" y2="200" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        </svg>
+
+        {/* Top Brand Logo */}
+        <div className="relative z-10 flex items-center justify-between">
           <a
             href="/"
             onClick={(e) => {
@@ -133,199 +147,258 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
           >
             AtoZenius<span className="text-brand-accent">.</span>
           </a>
-        </motion.div>
+          <span className="text-[11px] font-mono text-white/45 tracking-wider">
+            OFFLINE + DIGITAL COMPANION
+          </span>
+        </div>
 
-        <motion.div
-          variants={fadeVariants}
-          initial="hidden"
-          animate="visible"
-          className="relative z-10 max-w-md"
-        >
-          <h2 className="text-4xl lg:text-5xl font-serif leading-tight mb-6 text-white/95">
-            {isLogin ? 'Learn Better. Achieve Faster.' : 'Begin your mentored career track.'}
-          </h2>
-          <p className="text-white/55 text-lg leading-relaxed">
-            Access personalized offline class notes, capstone milestones, batch Q&amp;A, and mentor updates inside one unified ecosystem.
-          </p>
-        </motion.div>
+        {/* Center Thesis + Tactile Workspace Preview Card */}
+        <div className="relative z-10 space-y-8 my-auto py-8 max-w-md">
+          <div>
+            <h2 className="text-4xl xl:text-[2.75rem] font-bold tracking-[-0.03em] leading-[1.1] mb-4 text-white">
+              Learn Better.
+              <br />
+              <span className="text-[#60A5FA]">Achieve Faster.</span>
+            </h2>
+            <p className="text-white/55 text-base leading-relaxed">
+              Your classroom study guides, capstone reviews, and batch community in one quiet workspace.
+            </p>
+          </div>
 
-        <motion.div
-          variants={fadeVariants}
-          initial="hidden"
-          animate="visible"
-          className="relative z-10 text-brand-secondary/45 text-xs uppercase tracking-widest font-bold"
-        >
-          © 2026 AtoZenius Private Limited
-        </motion.div>
-      </div>
+          {/* Editorial Specimen Mini-Card */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between text-[11px] font-mono">
+              <span className="inline-flex items-center gap-2 text-[#60A5FA]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#60A5FA]" />
+                Next Offline Session
+              </span>
+              <span className="text-white/45">10:00 AM · Room 204</span>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="text-sm font-semibold text-white leading-snug">
+                Personalized Lecture Guides, Capstone Milestones &amp; Mentor Feedback
+              </div>
+              <div className="pt-3 border-t border-white/10 grid grid-cols-3 gap-3 text-[11px] font-mono text-white/55">
+                <div>
+                  <span className="block text-white/35">TRACKS</span>
+                  <span className="text-white/85">IT · Pharma</span>
+                </div>
+                <div>
+                  <span className="block text-white/35">PROJECTS</span>
+                  <span className="text-white/85">3 Minor · 2 Major</span>
+                </div>
+                <div>
+                  <span className="block text-white/35">COMMUNITY</span>
+                  <span className="text-white/85">Web + WhatsApp</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      {/* Right Panel - Form & Demo Access */}
-      <div className="flex-1 flex flex-col relative bg-brand-cream min-h-screen overflow-y-auto">
-        <div className="md:hidden flex justify-between items-center p-6 shrink-0 z-20">
+        {/* Bottom Copyright */}
+        <div className="relative z-10 flex items-center justify-between text-[11px] font-mono text-white/35">
+          <span>© 2026 AtoZenius Private Limited</span>
           <a
             href="/"
             onClick={(e) => {
               e.preventDefault();
               if (onNavigate) onNavigate('landing');
             }}
-            className="font-bold text-xl text-brand-dark"
+            className="text-white/55 hover:text-white inline-flex items-center gap-1 transition-colors"
+          >
+            Back to site <ArrowUpRight size={12} />
+          </a>
+        </div>
+      </div>
+
+      {/* Right Precision Form Panel */}
+      <div className="flex-1 flex flex-col bg-brand-cream min-h-screen overflow-y-auto no-scrollbar">
+        {/* Mobile Header */}
+        <div className="lg:hidden flex justify-between items-center px-6 pt-6 pb-2 shrink-0">
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              if (onNavigate) onNavigate('landing');
+            }}
+            className="font-bold text-xl tracking-tighter text-brand-dark"
           >
             AtoZenius<span className="text-brand-accent">.</span>
           </a>
+          <button
+            type="button"
+            onClick={() => onNavigate && onNavigate('landing')}
+            className="text-xs font-semibold text-brand-dark/60 hover:text-brand-dark"
+          >
+            Back to home
+          </button>
         </div>
 
         <div className="flex-1 px-6 py-8 md:py-12 flex flex-col justify-center items-center">
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-[430px]">
+            {/* Top Segmented Mode Switcher */}
+            <div className="inline-flex p-1 rounded-full bg-brand-dark/[0.05] border border-brand-dark/10 mb-7">
+              <button
+                type="button"
+                onClick={() => switchMode(true)}
+                className={`px-5 py-2 rounded-full text-xs font-bold transition-all ${
+                  isLogin
+                    ? 'bg-brand-dark text-white shadow-sm'
+                    : 'text-brand-dark/60 hover:text-brand-dark'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode(false)}
+                className={`px-5 py-2 rounded-full text-xs font-bold transition-all ${
+                  !isLogin
+                    ? 'bg-brand-dark text-white shadow-sm'
+                    : 'text-brand-dark/60 hover:text-brand-dark'
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
+
+            {/* Clean Display Header */}
             <motion.div
               key={isLogin ? 'login-header' : 'signup-header'}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35 }}
-              className="mb-7 text-center md:text-left"
+              transition={{ duration: 0.25 }}
+              className="mb-7"
             >
-              <h1 className="text-3xl md:text-4xl font-bold text-brand-dark mb-2 tracking-tight">
-                {isLogin ? 'Sign In' : 'Create Account'}
+              <h1 className="text-3xl sm:text-4xl font-bold text-brand-dark tracking-[-0.03em] mb-2">
+                {isLogin ? 'Welcome back.' : 'Join your cohort.'}
               </h1>
-              <p className="text-brand-dark/55 text-sm md:text-base">
+              <p className="text-brand-dark/60 text-sm leading-relaxed">
                 {isLogin
-                  ? 'Enter your credentials or preview a student cohort below.'
-                  : 'Enroll your details to enter the student companion portal.'}
+                  ? 'Sign in with your AtoZenius email to open your workspace.'
+                  : 'Create your account to access offline class notes and batch updates.'}
               </p>
             </motion.div>
 
-            {/* Instant Demo Student Access */}
-            <div className="mb-7 p-4 rounded-2xl bg-white border border-brand-dark/10">
-              <div className="text-[11px] font-mono uppercase tracking-wider text-brand-dark/45 mb-2.5">
-                Instant Student Preview (Select Offline Batch)
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {trackOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => handleQuickDemo(opt.id)}
-                    className="px-3.5 py-2 rounded-full text-xs font-bold bg-brand-cream hover:bg-brand-dark hover:text-white border border-brand-dark/10 text-brand-dark transition-colors"
-                  >
-                    {portalTracks[opt.id].batchCode} · {opt.label.split(' ')[0]} {opt.label.split(' ')[1]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <form className="space-y-4 md:space-y-5" onSubmit={handleSubmit}>
+            {/* Unified Tactile Form */}
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <AnimatePresence mode="popLayout">
                 {!isLogin && (
                   <motion.div
                     initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.25 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <div className="relative group">
-                      <label className="block text-xs font-bold text-brand-dark/45 uppercase tracking-wider mb-2">
-                        Full Name
-                      </label>
-                      <div className="relative">
-                        <User
-                          className="absolute left-0 top-3.5 text-brand-dark/30 group-focus-within:text-brand-accent transition-colors"
-                          size={20}
-                        />
-                        <input
-                          type="text"
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          className="w-full pl-8 pr-4 py-3 bg-transparent border-b border-brand-dark/20 focus:border-brand-accent outline-none text-brand-dark transition-all focus:bg-brand-secondary/20 rounded-t-lg"
-                          placeholder="Your full name"
-                        />
-                      </div>
-                    </div>
+                    <label
+                      htmlFor="auth-fullname"
+                      className="block text-[11px] font-mono uppercase tracking-wider text-brand-dark/55 mb-1.5"
+                    >
+                      Full name
+                    </label>
+                    <input
+                      id="auth-fullname"
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Kalyan Karadi"
+                      className="w-full px-4 py-3.5 rounded-2xl bg-white border border-brand-dark/12 text-sm text-brand-dark placeholder:text-brand-dark/35 focus:outline-none focus:border-brand-dark focus:ring-4 focus:ring-brand-dark/5 transition-all"
+                    />
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              <div className="relative group">
-                <label className="block text-xs font-bold text-brand-dark/45 uppercase tracking-wider mb-2">
-                  Email Address
+              <div>
+                <label
+                  htmlFor="auth-email"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-brand-dark/55 mb-1.5"
+                >
+                  Email address
                 </label>
-                <div className="relative">
-                  <Mail
-                    className="absolute left-0 top-3.5 text-brand-dark/30 group-focus-within:text-brand-accent transition-colors"
-                    size={20}
-                  />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-8 pr-4 py-3 bg-transparent border-b border-brand-dark/20 focus:border-brand-accent outline-none text-brand-dark transition-all focus:bg-brand-secondary/20 rounded-t-lg"
-                    placeholder="name@example.com"
-                  />
-                </div>
-                <p className="mt-2 text-[11px] text-brand-dark/50">
-                  Role auto-detected by email · Faculty/Staff test:{' '}
-                  <button
-                    type="button"
-                    onClick={() => handleAutofillRoleEmail('mentor@atozenius.in')}
-                    className="font-mono text-brand-accent hover:underline"
-                  >
-                    mentor@atozenius.in
-                  </button>{' '}
-                  or{' '}
-                  <button
-                    type="button"
-                    onClick={() => handleAutofillRoleEmail('staff@atozenius.com')}
-                    className="font-mono text-brand-accent hover:underline"
-                  >
-                    staff@atozenius.com
-                  </button>
-                </p>
-              </div>
-
-              <div className="relative group">
-                <label className="block text-xs font-bold text-brand-dark/45 uppercase tracking-wider mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock
-                    className="absolute left-0 top-3.5 text-brand-dark/30 group-focus-within:text-brand-accent transition-colors"
-                    size={20}
-                  />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-8 pr-4 py-3 bg-transparent border-b border-brand-dark/20 focus:border-brand-accent outline-none text-brand-dark transition-all focus:bg-brand-secondary/20 rounded-t-lg"
-                    placeholder="••••••••"
-                  />
-                </div>
+                <input
+                  id="auth-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-3.5 rounded-2xl bg-white border border-brand-dark/12 text-sm text-brand-dark placeholder:text-brand-dark/35 focus:outline-none focus:border-brand-dark focus:ring-4 focus:ring-brand-dark/5 transition-all"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-brand-dark/45 uppercase tracking-wider mb-2">
-                  Course Track (for learners)
-                </label>
-                <select
-                  value={selectedTrack}
-                  onChange={(e) => setSelectedTrack(e.target.value as PortalTrackId)}
-                  className="w-full px-3.5 py-3 rounded-xl bg-white border border-brand-dark/15 text-sm font-medium text-brand-dark focus:outline-none focus:border-brand-accent"
+                <label
+                  htmlFor="auth-password"
+                  className="block text-[11px] font-mono uppercase tracking-wider text-brand-dark/55 mb-1.5"
                 >
-                  {trackOptions.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.label} ({opt.batch})
-                    </option>
-                  ))}
-                </select>
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="auth-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full pl-4 pr-11 py-3.5 rounded-2xl bg-white border border-brand-dark/12 text-sm text-brand-dark placeholder:text-brand-dark/35 focus:outline-none focus:border-brand-dark focus:ring-4 focus:ring-brand-dark/5 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-dark/40 hover:text-brand-dark transition-colors p-1"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
+              {/* Cohort Selector only when creating a student account */}
               <AnimatePresence mode="popLayout">
                 {!isLogin && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0 }}
+                    initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4 pt-1"
                   >
-                    <label className="flex items-start gap-3 mt-4 cursor-pointer group">
-                      <div className="relative w-5 h-5 rounded border border-brand-dark/30 group-hover:border-brand-accent flex items-center justify-center transition-colors shrink-0 bg-transparent">
+                    <div>
+                      <span className="block text-[11px] font-mono uppercase tracking-wider text-brand-dark/55 mb-2">
+                        Select enrolled track
+                      </span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {trackOptions.map((opt) => {
+                          const isSelected = selectedTrack === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setSelectedTrack(opt.id)}
+                              className={`p-2.5 rounded-xl border text-left transition-all ${
+                                isSelected
+                                  ? 'bg-brand-dark text-white border-brand-dark'
+                                  : 'bg-white text-brand-dark border-brand-dark/12 hover:border-brand-dark/35'
+                              }`}
+                            >
+                              <div
+                                className={`text-[10px] font-mono ${
+                                  isSelected ? 'text-[#60A5FA]' : 'text-brand-accent'
+                                }`}
+                              >
+                                {opt.code}
+                              </div>
+                              <div className="text-[11px] font-bold leading-tight mt-0.5">
+                                {opt.shortLabel}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <label className="flex items-start gap-3 cursor-pointer group pt-1">
+                      <div className="relative w-5 h-5 rounded-md border border-brand-dark/25 group-hover:border-brand-accent flex items-center justify-center transition-colors shrink-0 bg-white">
                         <input
                           type="checkbox"
                           checked={agreed}
@@ -338,8 +411,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
                           strokeWidth={3}
                         />
                       </div>
-                      <span className="text-xs text-brand-dark/65 leading-tight pt-0.5 select-none">
-                        I agree to the{' '}
+                      <span className="text-xs text-brand-dark/65 leading-snug select-none">
+                        I accept the{' '}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -372,39 +445,78 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
                 <p className="text-xs font-semibold text-red-600">{errorMessage}</p>
               )}
 
-              <motion.button
+              <button
                 type="submit"
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                className="w-full py-4 md:py-5 bg-brand-dark text-brand-cream rounded-xl font-bold tracking-wide shadow-lg hover:shadow-xl hover:bg-brand-accent transition-all flex items-center justify-center gap-3 mt-4"
+                className="w-full py-4 px-6 bg-brand-dark text-white rounded-full text-sm font-bold hover:bg-brand-accent transition-colors duration-300 shadow-[0_12px_30px_-10px_rgba(5,5,5,0.35)] flex items-center justify-center gap-2.5 mt-2"
               >
-                {isLogin ? 'Continue to Workspace' : 'Create Account & Enter'}
-                <ArrowRight size={18} />
-              </motion.button>
+                <span>{isLogin ? 'Continue to workspace' : 'Create account'}</span>
+                <ArrowRight size={16} />
+              </button>
             </form>
 
+            {/* Clean Architectural Preview Dock */}
+            <div className="mt-8 pt-6 border-t border-brand-dark/10">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-mono uppercase tracking-wider text-brand-dark/45">
+                  Instant learner preview
+                </span>
+                <span className="text-[11px] font-mono text-brand-dark/40">1-click demo</span>
+              </div>
+
+              <div className="grid grid-cols-3 bg-white border border-brand-dark/10 rounded-2xl divide-x divide-brand-dark/10 overflow-hidden">
+                {trackOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => handleQuickDemo(opt.id)}
+                    className="p-3 text-left hover:bg-[#F7F4EE] transition-colors group"
+                  >
+                    <div className="text-[10px] font-mono text-brand-accent font-semibold flex items-center justify-between">
+                      <span>{opt.code}</span>
+                      <ArrowUpRight
+                        size={11}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      />
+                    </div>
+                    <div className="text-xs font-bold text-brand-dark leading-tight mt-0.5">
+                      {opt.shortLabel}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-brand-dark/50">
+                <span>
+                  Faculty / Staff:{' '}
+                  <button
+                    type="button"
+                    onClick={() => handleAutofillRoleEmail('mentor@atozenius.in')}
+                    className="font-mono text-brand-dark/75 hover:text-brand-accent underline decoration-brand-dark/20"
+                  >
+                    mentor@atozenius.in
+                  </button>{' '}
+                  ·{' '}
+                  <button
+                    type="button"
+                    onClick={() => handleAutofillRoleEmail('staff@atozenius.com')}
+                    className="font-mono text-brand-dark/75 hover:text-brand-accent underline decoration-brand-dark/20"
+                  >
+                    staff@atozenius.com
+                  </button>
+                </span>
+              </div>
+            </div>
+
+            {/* Enrollment Help */}
             <div className="mt-6 text-center">
               <a
                 href="https://api.whatsapp.com/send?phone=919502886626&text=Hi%2C%20I%20need%20help%20getting%20started%20with%20AtoZenius."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-xs font-bold text-brand-dark/60 hover:text-brand-accent transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-dark/55 hover:text-brand-accent transition-colors"
               >
-                <MessageCircle size={14} /> Need enrollment help? Chat on WhatsApp (+91 9502886626)
+                <MessageCircle size={13} /> Need enrollment help? WhatsApp +91 9502886626
               </a>
-            </div>
-
-            <div className="mt-6 md:mt-7 text-center pb-4">
-              <p className="text-brand-dark/60 text-sm">
-                {isLogin ? 'New to AtoZenius?' : 'Already have an account?'}{' '}
-                <button
-                  type="button"
-                  onClick={toggleMode}
-                  className="font-bold text-brand-accent hover:text-brand-dark hover:underline underline-offset-4 transition-colors ml-1"
-                >
-                  {isLogin ? 'Create account' : 'Sign in'}
-                </button>
-              </p>
             </div>
           </div>
         </div>
