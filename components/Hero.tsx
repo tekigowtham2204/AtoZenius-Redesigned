@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ArrowRight } from 'lucide-react';
+import { ChevronDown, ArrowRight, Megaphone } from 'lucide-react';
 import { ViewState } from '../types';
+import { getSiteConfig, SITE_CONFIG_EVENT } from '../data/portal';
 
 interface HeroProps {
   onOpenAuth: () => void;
@@ -9,7 +10,14 @@ interface HeroProps {
 }
 
 const Hero: React.FC<HeroProps> = ({ onOpenAuth, onNavigate }) => {
+  const [siteConfig, setSiteConfig] = useState(() => getSiteConfig());
   const smoothEase = [0.25, 0.1, 0.25, 1.0];
+
+  useEffect(() => {
+    const syncConfig = () => setSiteConfig(getSiteConfig());
+    window.addEventListener(SITE_CONFIG_EVENT, syncConfig);
+    return () => window.removeEventListener(SITE_CONFIG_EVENT, syncConfig);
+  }, []);
 
   const scrollToContent = () => {
     const element = document.getElementById('insights');
@@ -30,6 +38,18 @@ const Hero: React.FC<HeroProps> = ({ onOpenAuth, onNavigate }) => {
   return (
     <section className="relative min-h-[100svh] flex items-center justify-center pt-24 md:pt-20 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto text-center z-10 flex flex-col items-center">
+        {siteConfig.announcementText.trim() && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: smoothEase }}
+            className="mb-6 inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#0A0B0E] text-white text-xs font-semibold shadow-sm"
+          >
+            <Megaphone size={13} className="text-[#60A5FA] shrink-0" />
+            <span>{siteConfig.announcementText}</span>
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -47,7 +67,8 @@ const Hero: React.FC<HeroProps> = ({ onOpenAuth, onNavigate }) => {
           transition={{ duration: 0.45, delay: 0.1, ease: smoothEase }}
           className="text-base sm:text-lg md:text-xl text-brand-dark/70 max-w-xl md:max-w-2xl mx-auto mb-10 md:mb-16 font-medium leading-relaxed px-2"
         >
-          <span className="font-bold text-brand-dark">Learn Better. Achieve Faster.</span> Practical courses across IT, Pharma, Management &amp; Agriculture—backed by 1-on-1 industry mentors, internships, and career placement support.
+          <span className="font-bold text-brand-dark">{siteConfig.heroTaglinePrefix}</span>{' '}
+          {siteConfig.heroSubtitle}
         </motion.p>
 
         <motion.div

@@ -29,6 +29,10 @@ import StaffOpsPage from './components/portal/staff/StaffOpsPage';
 import StaffBatchesPage from './components/portal/staff/StaffBatchesPage';
 import StaffAdmissionsPage from './components/portal/staff/StaffAdmissionsPage';
 import StaffPlacementsPage from './components/portal/staff/StaffPlacementsPage';
+import AdminOverviewPage from './components/portal/admin/AdminOverviewPage';
+import AdminWebsitePage from './components/portal/admin/AdminWebsitePage';
+import AdminAccessPage from './components/portal/admin/AdminAccessPage';
+import AdminOperationsPage from './components/portal/admin/AdminOperationsPage';
 import {
   getSavedSession,
   PortalRole,
@@ -49,9 +53,16 @@ const infoViews: InfoPageType[] = [
 const studentViews: ViewState[] = ['dashboard', 'notes', 'projects', 'community'];
 const mentorViews: ViewState[] = ['mentor-desk', 'mentor-notes', 'mentor-reviews', 'mentor-doubts'];
 const staffViews: ViewState[] = ['staff-ops', 'staff-batches', 'staff-admissions', 'staff-placements'];
-const allProtectedViews: ViewState[] = [...studentViews, ...mentorViews, ...staffViews];
+const adminViews: ViewState[] = ['admin-overview', 'admin-website', 'admin-access', 'admin-operations'];
+const allProtectedViews: ViewState[] = [
+  ...studentViews,
+  ...mentorViews,
+  ...staffViews,
+  ...adminViews,
+];
 
 const roleHome = (role: PortalRole): ViewState => {
+  if (role === 'admin') return 'admin-overview';
   if (role === 'mentor') return 'mentor-desk';
   if (role === 'staff') return 'staff-ops';
   return 'dashboard';
@@ -60,7 +71,12 @@ const roleHome = (role: PortalRole): ViewState => {
 const guardViewForSession = (requested: ViewState, session: PortalSession | null): ViewState => {
   if (!allProtectedViews.includes(requested)) return requested;
   if (!session) return 'auth';
-  if (session.role === 'student' && !studentViews.includes(requested)) return 'dashboard';
+  if (session.role === 'admin') return requested;
+  if (session.role === 'student') {
+    if (!studentViews.includes(requested)) return 'dashboard';
+    if (!session.trackId && requested !== 'dashboard') return 'dashboard';
+    return requested;
+  }
   if (session.role === 'mentor' && !mentorViews.includes(requested)) return 'mentor-desk';
   if (session.role === 'staff' && !staffViews.includes(requested)) return 'staff-ops';
   return requested;
@@ -101,6 +117,10 @@ const pathToView = (path: string): ViewState => {
   if (normalized === '/staff/batches') return 'staff-batches';
   if (normalized === '/staff/admissions') return 'staff-admissions';
   if (normalized === '/staff/placements') return 'staff-placements';
+  if (normalized === '/admin') return 'admin-overview';
+  if (normalized === '/admin/website') return 'admin-website';
+  if (normalized === '/admin/access') return 'admin-access';
+  if (normalized === '/admin/operations') return 'admin-operations';
   return 'landing';
 };
 
@@ -134,6 +154,10 @@ const viewToPath = (view: ViewState): string => {
     case 'staff-batches': route = '/staff/batches'; break;
     case 'staff-admissions': route = '/staff/admissions'; break;
     case 'staff-placements': route = '/staff/placements'; break;
+    case 'admin-overview': route = '/admin'; break;
+    case 'admin-website': route = '/admin/website'; break;
+    case 'admin-access': route = '/admin/access'; break;
+    case 'admin-operations': route = '/admin/operations'; break;
     case 'landing':
     default: route = '/'; break;
   }
@@ -169,6 +193,10 @@ const viewTitles: Record<ViewState, string> = {
   'staff-batches': 'Offline Batches - AtoZenius',
   'staff-admissions': 'Admissions Pipeline - AtoZenius',
   'staff-placements': 'Certificates & Placements - AtoZenius',
+  'admin-overview': 'Admin Overview - AtoZenius',
+  'admin-website': 'Website CMS - AtoZenius',
+  'admin-access': 'Access & Roles - AtoZenius',
+  'admin-operations': 'Admin Operations - AtoZenius',
 };
 
 const App: React.FC = () => {
@@ -385,6 +413,7 @@ const App: React.FC = () => {
                 session={session}
                 onNavigate={navigateTo}
                 onOpenLecture={handleOpenLecture}
+                onSelectTrack={handleSwitchTrack}
               />
             )}
 
@@ -462,6 +491,27 @@ const App: React.FC = () => {
 
             {currentView === 'staff-placements' && session && (
               <StaffPlacementsPage key="staff-placements" />
+            )}
+
+            {/* Admin Portal Routes */}
+            {currentView === 'admin-overview' && session && (
+              <AdminOverviewPage
+                key="admin-overview"
+                session={session}
+                onNavigate={navigateTo}
+              />
+            )}
+
+            {currentView === 'admin-website' && session && (
+              <AdminWebsitePage key="admin-website" />
+            )}
+
+            {currentView === 'admin-access' && session && (
+              <AdminAccessPage key="admin-access" />
+            )}
+
+            {currentView === 'admin-operations' && session && (
+              <AdminOperationsPage key="admin-operations" />
             )}
 
             {infoViews.includes(currentView as InfoPageType) && (

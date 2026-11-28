@@ -13,8 +13,10 @@ import {
   addAdmissionsLead,
   computeInitials,
   detectRoleFromEmail,
+  findProvisionedStudentByEmail,
+  getSiteConfig,
+  getWhatsappDigits,
   PortalSession,
-  portalTracks,
   PortalTrackId,
 } from '../data/portal';
 
@@ -30,12 +32,14 @@ const trackOptions: { id: PortalTrackId; code: string; shortLabel: string }[] = 
 ];
 
 const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
+  const siteConfig = getSiteConfig();
+  const whatsappDigits = getWhatsappDigits(siteConfig);
+
   const [isLogin, setIsLogin] = useState(true);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedTrack, setSelectedTrack] = useState<PortalTrackId>('ai-full-stack');
   const [agreed, setAgreed] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -61,23 +65,52 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
       return;
     }
 
-    const detected = detectRoleFromEmail(email, selectedTrack);
+    const cleanEmail = email.trim();
+    const detected = detectRoleFromEmail(cleanEmail, null);
+
+    // Validate provisioned offline / WhatsApp student credentials on Sign In
+    if (isLogin && detected.role === 'student') {
+      const provisioned = findProvisionedStudentByEmail(cleanEmail);
+      if (provisioned) {
+        if (provisioned.status === 'Revoked') {
+          setErrorMessage(
+            'Your portal access is currently paused. Please contact AtoZenius Admissions on WhatsApp.'
+          );
+          return;
+        }
+        if (password.trim() !== provisioned.tempPassword) {
+          setErrorMessage(
+            'Incorrect password for this batch account. Use the ATZ-XXXX temp password sent on WhatsApp.'
+          );
+          return;
+        }
+        onLogin({
+          name: provisioned.name,
+          email: provisioned.email,
+          initials: computeInitials(provisioned.name),
+          role: 'student',
+          trackId: provisioned.trackId,
+        });
+        return;
+      }
+    }
+
     const resolvedName = fullName.trim() || detected.suggestedName;
 
     if (!isLogin && detected.role === 'student') {
       addAdmissionsLead({
         name: resolvedName,
-        email: email.trim(),
-        phone: '+91 9502886626',
-        program: portalTracks[detected.trackId].courseTitle,
+        email: cleanEmail,
+        phone: siteConfig.whatsappNumber,
+        program: 'Pending Batch Selection',
         source: 'Portal Signup',
-        notes: `Self-registered for ${portalTracks[detected.trackId].batchCode}`,
+        notes: 'Self-registered account; awaiting batch claim or track exploration.',
       });
     }
 
     onLogin({
       name: resolvedName,
-      email: email.trim(),
+      email: cleanEmail,
       initials: computeInitials(resolvedName),
       role: detected.role,
       trackId: detected.trackId,
@@ -272,16 +305,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
               className="mb-7"
             >
               <h1 className="text-3xl sm:text-4xl font-bold text-brand-dark tracking-[-0.03em] mb-2">
-                {isLogin ? 'Welcome back.' : 'Join your cohort.'}
+                {isLogin ? 'Welcome back.' : 'Create your account.'}
               </h1>
               <p className="text-brand-dark/60 text-sm leading-relaxed">
                 {isLogin
-                  ? 'Sign in with your AtoZenius email to open your workspace.'
-                  : 'Create your account to access offline class notes and batch updates.'}
+                  ? 'Sign in with your AtoZenius email or WhatsApp batch credentials.'
+                  : 'Register cleanly now—you can claim your offline batch code or choose a track inside your dashboard.'}
               </p>
             </motion.div>
 
-            {/* Unified Tactile Form */}
+            {/* Unified Tactile Form (Track-Free Signup) */}
             <form className="space-y-4" onSubmit={handleSubmit}>
               <AnimatePresence mode="popLayout">
                 {!isLogin && (
@@ -339,7 +372,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
+                    placeholder={isLogin ? 'Password or ATZ-XXXX batch code' : 'Create a password'}
                     className="w-full pl-4 pr-11 py-3.5 rounded-2xl bg-white border border-brand-dark/12 text-sm text-brand-dark placeholder:text-brand-dark/35 focus:outline-none focus:border-brand-dark focus:ring-4 focus:ring-brand-dark/5 transition-all"
                   />
                   <button
@@ -353,7 +386,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
                 </div>
               </div>
 
-              {/* Cohort Selector only when creating a student account */}
               <AnimatePresence mode="popLayout">
                 {!isLogin && (
                   <motion.div
@@ -361,42 +393,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="space-y-4 pt-1"
+                    className="pt-1"
                   >
-                    <div>
-                      <span className="block text-[11px] font-mono uppercase tracking-wider text-brand-dark/55 mb-2">
-                        Select enrolled track
-                      </span>
-                      <div className="grid grid-cols-3 gap-2">
-                        {trackOptions.map((opt) => {
-                          const isSelected = selectedTrack === opt.id;
-                          return (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => setSelectedTrack(opt.id)}
-                              className={`p-2.5 rounded-xl border text-left transition-all ${
-                                isSelected
-                                  ? 'bg-brand-dark text-white border-brand-dark'
-                                  : 'bg-white text-brand-dark border-brand-dark/12 hover:border-brand-dark/35'
-                              }`}
-                            >
-                              <div
-                                className={`text-[10px] font-mono ${
-                                  isSelected ? 'text-[#60A5FA]' : 'text-brand-accent'
-                                }`}
-                              >
-                                {opt.code}
-                              </div>
-                              <div className="text-[11px] font-bold leading-tight mt-0.5">
-                                {opt.shortLabel}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
                     <label className="flex items-start gap-3 cursor-pointer group pt-1">
                       <div className="relative w-5 h-5 rounded-md border border-brand-dark/25 group-hover:border-brand-accent flex items-center justify-center transition-colors shrink-0 bg-white">
                         <input
@@ -454,68 +452,80 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
               </button>
             </form>
 
-            {/* Clean Architectural Preview Dock */}
-            <div className="mt-8 pt-6 border-t border-brand-dark/10">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-mono uppercase tracking-wider text-brand-dark/45">
-                  Instant learner preview
-                </span>
-                <span className="text-[11px] font-mono text-brand-dark/40">1-click demo</span>
-              </div>
+            {/* Clean Architectural Preview Dock (Controlled by Admin showDemoPreview toggle) */}
+            {siteConfig.showDemoPreview && (
+              <div className="mt-8 pt-6 border-t border-brand-dark/10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-brand-dark/45">
+                    Instant learner preview
+                  </span>
+                  <span className="text-[11px] font-mono text-brand-dark/40">1-click demo</span>
+                </div>
 
-              <div className="grid grid-cols-3 bg-white border border-brand-dark/10 rounded-2xl divide-x divide-brand-dark/10 overflow-hidden">
-                {trackOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => handleQuickDemo(opt.id)}
-                    className="p-3 text-left hover:bg-[#F7F4EE] transition-colors group"
-                  >
-                    <div className="text-[10px] font-mono text-brand-accent font-semibold flex items-center justify-between">
-                      <span>{opt.code}</span>
-                      <ArrowUpRight
-                        size={11}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      />
-                    </div>
-                    <div className="text-xs font-bold text-brand-dark leading-tight mt-0.5">
-                      {opt.shortLabel}
-                    </div>
-                  </button>
-                ))}
-              </div>
+                <div className="grid grid-cols-3 bg-white border border-brand-dark/10 rounded-2xl divide-x divide-brand-dark/10 overflow-hidden">
+                  {trackOptions.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => handleQuickDemo(opt.id)}
+                      className="p-3 text-left hover:bg-[#F7F4EE] transition-colors group"
+                    >
+                      <div className="text-[10px] font-mono text-brand-accent font-semibold flex items-center justify-between">
+                        <span>{opt.code}</span>
+                        <ArrowUpRight
+                          size={11}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        />
+                      </div>
+                      <div className="text-xs font-bold text-brand-dark leading-tight mt-0.5">
+                        {opt.shortLabel}
+                      </div>
+                    </button>
+                  ))}
+                </div>
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-brand-dark/50">
-                <span>
-                  Faculty / Staff:{' '}
-                  <button
-                    type="button"
-                    onClick={() => handleAutofillRoleEmail('mentor@atozenius.in')}
-                    className="font-mono text-brand-dark/75 hover:text-brand-accent underline decoration-brand-dark/20"
-                  >
-                    mentor@atozenius.in
-                  </button>{' '}
-                  ·{' '}
-                  <button
-                    type="button"
-                    onClick={() => handleAutofillRoleEmail('staff@atozenius.com')}
-                    className="font-mono text-brand-dark/75 hover:text-brand-accent underline decoration-brand-dark/20"
-                  >
-                    staff@atozenius.com
-                  </button>
-                </span>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-brand-dark/50">
+                  <span>
+                    Team:{' '}
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillRoleEmail('admin@atozenius.com')}
+                      className="font-mono text-brand-dark/75 hover:text-brand-accent underline decoration-brand-dark/20"
+                    >
+                      admin@atozenius.com
+                    </button>{' '}
+                    ·{' '}
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillRoleEmail('mentor@atozenius.in')}
+                      className="font-mono text-brand-dark/75 hover:text-brand-accent underline decoration-brand-dark/20"
+                    >
+                      mentor@atozenius.in
+                    </button>{' '}
+                    ·{' '}
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillRoleEmail('staff@atozenius.com')}
+                      className="font-mono text-brand-dark/75 hover:text-brand-accent underline decoration-brand-dark/20"
+                    >
+                      staff@atozenius.com
+                    </button>
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Enrollment Help */}
             <div className="mt-6 text-center">
               <a
-                href="https://api.whatsapp.com/send?phone=919502886626&text=Hi%2C%20I%20need%20help%20getting%20started%20with%20AtoZenius."
+                href={`https://api.whatsapp.com/send?phone=${whatsappDigits}&text=${encodeURIComponent(
+                  'Hi, I need help getting started with AtoZenius.'
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-dark/55 hover:text-brand-accent transition-colors"
               >
-                <MessageCircle size={13} /> Need enrollment help? WhatsApp +91 9502886626
+                <MessageCircle size={13} /> Need enrollment help? WhatsApp {siteConfig.whatsappNumber}
               </a>
             </div>
           </div>

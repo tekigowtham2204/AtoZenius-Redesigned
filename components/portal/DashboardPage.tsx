@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowRight,
@@ -6,13 +6,20 @@ import {
   BookOpen,
   Calendar,
   CheckCircle2,
+  KeyRound,
+  Lock,
   MapPin,
   MessageCircle,
   Bookmark,
 } from 'lucide-react';
 import {
+  allTrackIds,
+  claimBatchByCode,
   getResolvedTrackData,
+  getSiteConfig,
+  getWhatsappDigits,
   PortalSession,
+  PortalTrackId,
   ProjectReviewOverride,
   ProjectSubmissionRecord,
   readStorage,
@@ -24,13 +31,174 @@ interface DashboardPageProps {
   session: PortalSession;
   onNavigate: (view: ViewState) => void;
   onOpenLecture: (lectureId: string) => void;
+  onSelectTrack?: (trackId: PortalTrackId) => void;
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
   session,
   onNavigate,
   onOpenLecture,
+  onSelectTrack,
 }) => {
+  const [batchCodeInput, setBatchCodeInput] = useState('');
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const siteConfig = getSiteConfig();
+
+  // Onboarding / Batch Claim Screen when trackId === null
+  if (!session.trackId) {
+    const handleClaimSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      setClaimError(null);
+      const matchedTrackId = claimBatchByCode(batchCodeInput);
+      if (!matchedTrackId) {
+        setClaimError(
+          'Batch or access code not recognized. Try FS-08, MC-14, DS-11, or your ATZ-XXXX code.'
+        );
+        return;
+      }
+      if (onSelectTrack) {
+        onSelectTrack(matchedTrackId);
+      }
+    };
+
+    const whatsappUrl = `https://wa.me/${getWhatsappDigits(siteConfig)}?text=${encodeURIComponent(
+      `Hi AtoZenius Admissions, I signed up with ${session.email} and would like to activate my offline batch.`
+    )}`;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.15 } }}
+        className="pt-28 md:pt-36 pb-24 min-h-screen bg-brand-cream"
+      >
+        <div className="container mx-auto px-6 max-w-5xl">
+          <div className="pb-8 mb-10 border-b border-brand-dark/10">
+            <p className="text-xs font-mono uppercase tracking-widest text-brand-accent font-semibold mb-2">
+              Cohort Activation · {session.email}
+            </p>
+            <h1 className="text-3xl sm:text-5xl font-bold text-brand-dark tracking-tighter">
+              Welcome, {session.name.split(' ')[0]}.
+            </h1>
+            <p className="text-sm sm:text-base text-brand-dark/65 mt-2 max-w-2xl">
+              {siteConfig.allowSelfSignupExplore
+                ? 'Claim your offline batch code below or select a program track to explore lecture study guides.'
+                : 'Enroll at your center or via WhatsApp to activate your batch, then enter your Batch Access Code below.'}
+            </p>
+          </div>
+
+          {/* Batch Access Code Claim Card */}
+          <form
+            onSubmit={handleClaimSubmit}
+            className="bg-[#0A0B0E] text-white rounded-[1.75rem] p-7 sm:p-10 mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+          >
+            <div className="max-w-lg">
+              <div className="inline-flex items-center gap-2 text-xs font-mono text-[#60A5FA] mb-2">
+                <KeyRound size={14} /> ACTIVATE OFFLINE COHORT
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight mb-2">
+                Have a Batch Code or Staff Access Code?
+              </h2>
+              <p className="text-xs text-white/65 leading-relaxed">
+                Enter your classroom batch code (e.g., <span className="font-mono text-white">FS-08</span>,{' '}
+                <span className="font-mono text-white">MC-14</span>,{' '}
+                <span className="font-mono text-white">DS-11</span>) or your staff-issued{' '}
+                <span className="font-mono text-white">ATZ-XXXX</span> code.
+              </p>
+              {claimError && (
+                <p className="text-xs font-semibold text-red-400 mt-3">{claimError}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto lg:min-w-[360px]">
+              <input
+                type="text"
+                value={batchCodeInput}
+                onChange={(e) => setBatchCodeInput(e.target.value)}
+                placeholder="Enter code (e.g. FS-08)"
+                className="flex-1 px-4 py-3.5 rounded-full bg-white/10 border border-white/15 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#60A5FA]"
+              />
+              <button
+                type="submit"
+                className="px-6 py-3.5 bg-brand-accent text-white rounded-full text-xs font-bold hover:bg-white hover:text-brand-dark transition-colors shrink-0 inline-flex items-center justify-center gap-1.5"
+              >
+                Activate Batch <ArrowRight size={14} />
+              </button>
+            </div>
+          </form>
+
+          {/* Conditional Track Exploration vs Strict Offline Mode */}
+          {siteConfig.allowSelfSignupExplore ? (
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-xl font-bold text-brand-dark tracking-tight">
+                  Or Explore a Learning Track
+                </h3>
+                <span className="text-xs font-mono text-brand-dark/50">
+                  Switchable anytime
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {allTrackIds.map((id) => {
+                  const t = getResolvedTrackData(id);
+                  return (
+                    <div
+                      key={id}
+                      className="bg-white rounded-[1.75rem] border border-brand-dark/10 p-6 flex flex-col justify-between"
+                    >
+                      <div>
+                        <span className="text-xs font-mono text-brand-accent font-semibold">
+                          {t.batchCode}
+                        </span>
+                        <h4 className="text-xl font-bold text-brand-dark mt-1 mb-2">
+                          {t.courseTitle}
+                        </h4>
+                        <p className="text-xs text-brand-dark/60 leading-relaxed mb-5">
+                          Mentor: {t.mentorName} · {t.branchLocation}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onSelectTrack && onSelectTrack(id)}
+                        className="w-full py-3 bg-brand-dark text-white rounded-full text-xs font-bold hover:bg-brand-accent transition-colors inline-flex items-center justify-center gap-2"
+                      >
+                        Open Study Workspace <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-[1.75rem] border border-brand-dark/10 p-8 sm:p-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="w-11 h-11 rounded-2xl bg-brand-cream border border-brand-dark/10 flex items-center justify-center shrink-0">
+                  <Lock size={20} className="text-brand-accent" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-brand-dark mb-1">
+                    Enroll at Center or via WhatsApp to Activate Your Batch
+                  </h3>
+                  <p className="text-sm text-brand-dark/65 max-w-xl">
+                    Self-signup track browsing is currently restricted to enrolled offline cohorts. Contact our academic counselors to receive your Batch Access Code.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-3.5 bg-emerald-600 text-white rounded-full text-xs font-bold hover:bg-emerald-700 transition-colors inline-flex items-center gap-2 shrink-0"
+              >
+                <MessageCircle size={15} /> Activate on WhatsApp
+              </a>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  }
+
   const track = getResolvedTrackData(session.trackId);
   const bookmarksMap = readStorage<Record<string, boolean>>(STORAGE_KEYS.bookmarks, {});
   const revisedMap = readStorage<Record<string, boolean>>(STORAGE_KEYS.revised, {});

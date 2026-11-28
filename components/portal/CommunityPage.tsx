@@ -11,6 +11,7 @@ import {
 import {
   computeInitials,
   getResolvedTrackData,
+  getSiteConfig,
   PortalSession,
   postBatchReply,
   postBatchThread,
@@ -25,7 +26,8 @@ const filters = ['All', 'Course Doubts', 'Mentor Pinned', 'Placement Alerts'] as
 
 const CommunityPage: React.FC<CommunityPageProps> = ({ session, prefillLecture }) => {
   const [, setRefreshTick] = useState(0);
-  const track = getResolvedTrackData(session.trackId);
+  const siteConfig = getSiteConfig();
+  const track = getResolvedTrackData(session.trackId || 'ai-full-stack');
   const [selectedFilter, setSelectedFilter] = useState<(typeof filters)[number]>('All');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -117,56 +119,69 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ session, prefillLecture }
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Main Thread Feed */}
           <div className="lg:col-span-8 space-y-6">
-            {/* Ask a Doubt Composer */}
-            <form
-              onSubmit={handlePostDoubt}
-              className="bg-white rounded-[1.75rem] border border-brand-dark/10 p-6 sm:p-7 space-y-4"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-bold text-brand-dark">
-                  Ask a Doubt in {track.batchCode}
-                </h2>
-                <span className="text-[11px] font-mono text-brand-dark/45">
-                  Visible to batch &amp; {track.mentorName}
-                </span>
+            {/* Ask a Doubt Composer (or Read-Only Notice) */}
+            {siteConfig.communityReadOnly ? (
+              <div className="bg-[#F7F4EE] rounded-[1.75rem] border border-brand-dark/10 p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-brand-accent font-semibold block mb-1">
+                    Read-Only Batch Board
+                  </span>
+                  <p className="text-sm font-medium text-brand-dark">
+                    Mentor announcements and placement alerts are active below. Use WhatsApp on the right for 1-on-1 doubt resolution.
+                  </p>
+                </div>
               </div>
+            ) : (
+              <form
+                onSubmit={handlePostDoubt}
+                className="bg-white rounded-[1.75rem] border border-brand-dark/10 p-6 sm:p-7 space-y-4"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-bold text-brand-dark">
+                    Ask a Doubt in {track.batchCode}
+                  </h2>
+                  <span className="text-[11px] font-mono text-brand-dark/45">
+                    Visible to batch &amp; {track.mentorName}
+                  </span>
+                </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <input
-                  type="text"
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <input
+                    type="text"
+                    required
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Short question headline..."
+                    className="sm:col-span-2 px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
+                  />
+                  <input
+                    type="text"
+                    value={newLectureRef}
+                    onChange={(e) => setNewLectureRef(e.target.value)}
+                    placeholder="Topic tag (optional)"
+                    className="px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
+                  />
+                </div>
+
+                <textarea
+                  rows={3}
                   required
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Short question headline..."
-                  className="sm:col-span-2 px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
+                  value={newBody}
+                  onChange={(e) => setNewBody(e.target.value)}
+                  placeholder="Share what you tried or which concept from offline class needs clarification..."
+                  className="w-full px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
                 />
-                <input
-                  type="text"
-                  value={newLectureRef}
-                  onChange={(e) => setNewLectureRef(e.target.value)}
-                  placeholder="Topic tag (optional)"
-                  className="px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
-                />
-              </div>
 
-              <textarea
-                rows={3}
-                required
-                value={newBody}
-                onChange={(e) => setNewBody(e.target.value)}
-                placeholder="Share what you tried or which concept from offline class needs clarification..."
-                className="w-full px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
-              />
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 bg-brand-dark text-white rounded-full text-xs font-bold hover:bg-brand-accent transition-colors inline-flex items-center gap-2"
-                >
-                  <Send size={13} /> Post to Batch
-                </button>
-              </div>
-            </form>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-brand-dark text-white rounded-full text-xs font-bold hover:bg-brand-accent transition-colors inline-flex items-center gap-2"
+                  >
+                    <Send size={13} /> Post to Batch
+                  </button>
+                </div>
+              </form>
+            )}
 
             {/* Filter & Search Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -261,26 +276,28 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ session, prefillLecture }
                   )}
 
                   {/* Quick Reply */}
-                  <form
-                    onSubmit={(e) => handlePostReply(thread.id, e)}
-                    className="flex gap-2 pt-3 border-t border-brand-dark/5"
-                  >
-                    <input
-                      type="text"
-                      value={replyDrafts[thread.id] || ''}
-                      onChange={(e) =>
-                        setReplyDrafts((prev) => ({ ...prev, [thread.id]: e.target.value }))
-                      }
-                      placeholder="Write a helpful reply..."
-                      className="flex-1 px-4 py-2 rounded-full bg-brand-cream border border-brand-dark/10 text-xs focus:outline-none focus:border-brand-accent"
-                    />
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-brand-dark text-white rounded-full text-xs font-bold hover:bg-brand-accent transition-colors"
+                  {!siteConfig.communityReadOnly && (
+                    <form
+                      onSubmit={(e) => handlePostReply(thread.id, e)}
+                      className="flex gap-2 pt-3 border-t border-brand-dark/5"
                     >
-                      Reply
-                    </button>
-                  </form>
+                      <input
+                        type="text"
+                        value={replyDrafts[thread.id] || ''}
+                        onChange={(e) =>
+                          setReplyDrafts((prev) => ({ ...prev, [thread.id]: e.target.value }))
+                        }
+                        placeholder="Write a helpful reply..."
+                        className="flex-1 px-4 py-2 rounded-full bg-brand-cream border border-brand-dark/10 text-xs focus:outline-none focus:border-brand-accent"
+                      />
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-brand-dark text-white rounded-full text-xs font-bold hover:bg-brand-accent transition-colors"
+                      >
+                        Reply
+                      </button>
+                    </form>
+                  )}
                 </article>
               ))}
             </div>

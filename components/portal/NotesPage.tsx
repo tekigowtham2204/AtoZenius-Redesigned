@@ -28,7 +28,7 @@ const NotesPage: React.FC<NotesPageProps> = ({
   initialLectureId,
   onAskDoubt,
 }) => {
-  const track = getResolvedTrackData(session.trackId);
+  const track = getResolvedTrackData(session.trackId || 'ai-full-stack');
   const [selectedLectureId, setSelectedLectureId] = useState<string>(
     initialLectureId && track.lectures.some((l) => l.id === initialLectureId)
       ? initialLectureId

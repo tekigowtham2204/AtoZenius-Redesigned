@@ -24,7 +24,8 @@ const MentorDeskPage: React.FC<MentorDeskPageProps> = ({
   onSelectTrack,
   onNavigate,
 }) => {
-  const track = getResolvedTrackData(session.trackId);
+  const activeTrackId = session.trackId || 'ai-full-stack';
+  const track = getResolvedTrackData(activeTrackId);
   const submissions = readStorage<Record<string, ProjectSubmissionRecord>>(
     STORAGE_KEYS.submissions,
     {}

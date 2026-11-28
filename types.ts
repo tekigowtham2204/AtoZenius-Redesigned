@@ -26,4 +26,8 @@ export type ViewState =
   | 'staff-ops'
   | 'staff-batches'
   | 'staff-admissions'
-  | 'staff-placements';
+  | 'staff-placements'
+  | 'admin-overview'
+  | 'admin-website'
+  | 'admin-access'
+  | 'admin-operations';

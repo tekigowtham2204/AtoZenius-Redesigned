@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronDown, LogOut, Award, BookOpen } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, Award, BookOpen, Globe, LayoutDashboard, Users } from 'lucide-react';
 import { ViewState } from '../types';
 import {
   getResolvedTrackData,
+  getSiteConfig,
   PortalRole,
   PortalSession,
   PortalTrackId,
+  SITE_CONFIG_EVENT,
 } from '../data/portal';
 
 interface NavbarProps {
@@ -43,12 +45,19 @@ const roleNavLinks: Record<PortalRole, { name: string; href: string; view: ViewS
     { name: 'Admissions', href: '/staff/admissions', view: 'staff-admissions' },
     { name: 'Placements', href: '/staff/placements', view: 'staff-placements' },
   ],
+  admin: [
+    { name: 'Overview', href: '/admin', view: 'admin-overview' },
+    { name: 'Website CMS', href: '/admin/website', view: 'admin-website' },
+    { name: 'Access & Roles', href: '/admin/access', view: 'admin-access' },
+    { name: 'Operations', href: '/admin/operations', view: 'admin-operations' },
+  ],
 };
 
 const roleHomeRoute: Record<PortalRole, ViewState> = {
   student: 'dashboard',
   mentor: 'mentor-desk',
   staff: 'staff-ops',
+  admin: 'admin-overview',
 };
 
 const trackSwitcherItems: { id: PortalTrackId; label: string }[] = [
@@ -68,7 +77,14 @@ const Navbar: React.FC<NavbarProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [siteConfig, setSiteConfig] = useState(() => getSiteConfig());
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const syncConfig = () => setSiteConfig(getSiteConfig());
+    window.addEventListener(SITE_CONFIG_EVENT, syncConfig);
+    return () => window.removeEventListener(SITE_CONFIG_EVENT, syncConfig);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -88,14 +104,20 @@ const Navbar: React.FC<NavbarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navLinks = session ? roleNavLinks[session.role] : publicNavLinks;
-  const activeTrack = session ? getResolvedTrackData(session.trackId) : null;
+  const visiblePublicLinks = siteConfig.showCareersInHeader
+    ? publicNavLinks
+    : publicNavLinks.filter((item) => item.view !== 'careers');
+  const navLinks = session ? roleNavLinks[session.role] : visiblePublicLinks;
+  const activeTrack =
+    session && session.trackId ? getResolvedTrackData(session.trackId) : null;
   const roleBadge = session
-    ? session.role === 'staff'
+    ? session.role === 'admin'
+      ? 'Admin'
+      : session.role === 'staff'
       ? 'AtoZenius Staff'
       : session.role === 'mentor'
       ? 'Faculty'
-      : activeTrack?.batchCode || ''
+      : activeTrack?.batchCode || 'Onboarding'
     : '';
 
   return (
@@ -213,6 +235,40 @@ const Navbar: React.FC<NavbarProps> = ({
                       )}
 
                       <div className="space-y-1">
+                        {session.role === 'admin' && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProfileOpen(false);
+                                if (onNavigate) onNavigate('landing');
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-brand-dark/75 hover:bg-brand-cream inline-flex items-center gap-2"
+                            >
+                              <Globe size={14} /> View Public Site
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProfileOpen(false);
+                                if (onNavigate) onNavigate('dashboard');
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-brand-dark/75 hover:bg-brand-cream inline-flex items-center gap-2"
+                            >
+                              <LayoutDashboard size={14} /> View Student Portal
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProfileOpen(false);
+                                if (onNavigate) onNavigate('mentor-desk');
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-brand-dark/75 hover:bg-brand-cream inline-flex items-center gap-2"
+                            >
+                              <Users size={14} /> View Mentor Desk
+                            </button>
+                          </>
+                        )}
                         <button
                           type="button"
                           onClick={() => {

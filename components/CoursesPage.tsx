@@ -8,7 +8,8 @@ import {
   MessageCircle,
   BookOpen,
 } from 'lucide-react';
-import { courseCategories, coursesData, CourseCategory, CourseItem } from '../data/courses';
+import { courseCategories, CourseCategory, CourseItem } from '../data/courses';
+import { getResolvedCourses, getWhatsappDigits } from '../data/portal';
 
 interface CoursesPageProps {
   onOpenAuth: () => void;
@@ -62,10 +63,13 @@ const CoursesPage: React.FC<CoursesPageProps> = ({ onOpenAuth }) => {
   const [enrolledIds, setEnrolledIds] = useState<string[]>([]);
   const [activeCourse, setActiveCourse] = useState<CourseItem | null>(null);
 
+  const resolvedCourses = getResolvedCourses();
+  const whatsappDigits = getWhatsappDigits();
+
   const filteredCourses =
     selectedCategory === 'All'
-      ? coursesData
-      : coursesData.filter((c) => c.category === selectedCategory);
+      ? resolvedCourses
+      : resolvedCourses.filter((c) => c.category === selectedCategory);
 
   const handleEnroll = (id: string) => {
     if (!enrolledIds.includes(id)) {
@@ -358,7 +362,7 @@ const CoursesPage: React.FC<CoursesPageProps> = ({ onOpenAuth }) => {
                   Enroll in Program <ArrowRight size={15} />
                 </button>
                 <a
-                  href={`https://wa.me/919502886626?text=${encodeURIComponent(
+                  href={`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
                     `Hi, Can we Connect to get more details about ${activeCourse.whatsappQuery}`
                   )}`}
                   target="_blank"

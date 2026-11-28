@@ -16,7 +16,7 @@ interface ProjectsPageProps {
 }
 
 const ProjectsPage: React.FC<ProjectsPageProps> = ({ session }) => {
-  const track = getResolvedTrackData(session.trackId);
+  const track = getResolvedTrackData(session.trackId || 'ai-full-stack');
   const [submissions, setSubmissions] = useState<
     Record<string, ProjectSubmissionRecord>
   >(() =>

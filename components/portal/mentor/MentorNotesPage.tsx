@@ -19,7 +19,8 @@ interface MentorNotesPageProps {
 }
 
 const MentorNotesPage: React.FC<MentorNotesPageProps> = ({ session, onSelectTrack }) => {
-  const track = getResolvedTrackData(session.trackId);
+  const activeTrackId = session.trackId || 'ai-full-stack';
+  const track = getResolvedTrackData(activeTrackId);
   const [selectedLectureId, setSelectedLectureId] = useState(track.lectures[0].id);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [highlightDraft, setHighlightDraft] = useState('');
@@ -70,10 +71,10 @@ const MentorNotesPage: React.FC<MentorNotesPageProps> = ({ session, onSelectTrac
       STORAGE_KEYS.customLectures,
       {}
     );
-    const trackList = existing[session.trackId] || [];
+    const trackList = existing[activeTrackId] || [];
     const nextNum = String(track.lectures.length + 1).padStart(2, '0');
     const created: LectureNote = {
-      id: `${session.trackId}-custom-${Date.now()}`,
+      id: `${activeTrackId}-custom-${Date.now()}`,
       lectureNumber: nextNum,
       weekLabel: `Week ${nextNum}`,
       title: newTitle.trim(),
@@ -94,7 +95,7 @@ const MentorNotesPage: React.FC<MentorNotesPageProps> = ({ session, onSelectTrac
 
     writeStorage(STORAGE_KEYS.customLectures, {
       ...existing,
-      [session.trackId]: [...trackList, created],
+      [activeTrackId]: [...trackList, created],
     });
     setIsAddingNew(false);
     setSelectedLectureId(created.id);

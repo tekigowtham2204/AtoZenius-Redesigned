@@ -1,12 +1,21 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Linkedin, Youtube, Instagram } from 'lucide-react';
 import { ViewState } from '../types';
+import { getSiteConfig, SITE_CONFIG_EVENT } from '../data/portal';
 
 interface FooterProps {
   onNavigate?: (view: ViewState) => void;
 }
 
 const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+  const [siteConfig, setSiteConfig] = useState(() => getSiteConfig());
+
+  useEffect(() => {
+    const syncConfig = () => setSiteConfig(getSiteConfig());
+    window.addEventListener(SITE_CONFIG_EVENT, syncConfig);
+    return () => window.removeEventListener(SITE_CONFIG_EVENT, syncConfig);
+  }, []);
+
   const handleNav = (e: React.MouseEvent<HTMLAnchorElement>, view: ViewState) => {
     e.preventDefault();
     if (onNavigate) onNavigate(view);
@@ -30,7 +39,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </p>
             <div className="flex items-center space-x-3">
               <a
-                href="https://www.linkedin.com/showcase/atozenius/"
+                href={siteConfig.linkedinUrl || 'https://www.linkedin.com/showcase/atozenius/'}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="LinkedIn"
@@ -39,7 +48,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <Linkedin size={16} />
               </a>
               <a
-                href="https://www.youtube.com/@AtoZenius"
+                href={siteConfig.youtubeUrl || 'https://www.youtube.com/@AtoZenius'}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="YouTube"
@@ -48,7 +57,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <Youtube size={16} />
               </a>
               <a
-                href="https://www.instagram.com/atozenius"
+                href={siteConfig.instagramUrl || 'https://www.instagram.com/atozenius'}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"

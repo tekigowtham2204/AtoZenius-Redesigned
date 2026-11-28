@@ -18,7 +18,8 @@ interface MentorDoubtsPageProps {
 
 const MentorDoubtsPage: React.FC<MentorDoubtsPageProps> = ({ session, onSelectTrack }) => {
   const [, setRefreshTick] = useState(0);
-  const track = getResolvedTrackData(session.trackId);
+  const activeTrackId = session.trackId || 'ai-full-stack';
+  const track = getResolvedTrackData(activeTrackId);
 
   const [announceTitle, setAnnounceTitle] = useState('');
   const [announceBody, setAnnounceBody] = useState('');
@@ -28,7 +29,7 @@ const MentorDoubtsPage: React.FC<MentorDoubtsPageProps> = ({ session, onSelectTr
     e.preventDefault();
     if (!announceTitle.trim() || !announceBody.trim()) return;
 
-    postBatchThread(session.trackId, {
+    postBatchThread(activeTrackId, {
       id: `mentor-pin-${Date.now()}`,
       category: 'Mentor Pinned',
       author: session.name,

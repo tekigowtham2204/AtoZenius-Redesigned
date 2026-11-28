@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, ArrowRight, ArrowLeft, Search, CheckCircle2, Clock, User } from 'lucide-react';
-import { blogCategories, blogPosts, BlogCategory, BlogPost } from '../data/blog';
+import { blogCategories, BlogCategory, BlogPost } from '../data/blog';
+import { getResolvedBlogPosts } from '../data/portal';
 import { ViewState } from '../types';
 
 interface BlogPageProps {
@@ -12,8 +13,9 @@ const BlogPage: React.FC<BlogPageProps> = ({ onNavigate }) => {
   const [selectedCategory, setSelectedCategory] = useState<BlogCategory>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [activePost, setActivePost] = useState<BlogPost | null>(null);
+  const resolvedPosts = getResolvedBlogPosts();
 
-  const filteredPosts = blogPosts.filter((post) => {
+  const filteredPosts = resolvedPosts.filter((post) => {
     const matchesCategory = selectedCategory === 'All' || post.category === selectedCategory;
     const q = searchQuery.trim().toLowerCase();
     const matchesQuery =

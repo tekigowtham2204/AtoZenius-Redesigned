@@ -1,13 +1,25 @@
+import {
+  Briefcase,
+  Code2,
+  Cpu,
+  Sprout,
+  Stethoscope,
+} from 'lucide-react';
+import { CourseCategory, CourseItem, coursesData } from './courses';
+import { MentorItem, mentorsData } from './mentors';
+import { StudentStory, studentStories } from './stories';
+import { BlogPost, blogPosts } from './blog';
+
 export type PortalTrackId = 'ai-full-stack' | 'advanced-medical-coding' | 'data-science-analytics';
 
-export type PortalRole = 'student' | 'mentor' | 'staff';
+export type PortalRole = 'student' | 'mentor' | 'staff' | 'admin';
 
 export interface PortalSession {
   name: string;
   email: string;
   initials: string;
   role: PortalRole;
-  trackId: PortalTrackId;
+  trackId: PortalTrackId | null;
 }
 
 export type StudentSession = PortalSession;
@@ -102,17 +114,67 @@ export interface ProjectReviewOverride {
   reviewedBy?: string;
 }
 
+export type LeadSource =
+  | 'Contact Form'
+  | 'Portal Signup'
+  | 'Walk-In Counseling'
+  | 'WhatsApp Enrollment'
+  | 'Phone Inquiry';
+
 export interface AdmissionsLead {
   id: string;
   name: string;
   email: string;
   phone: string;
   program: string;
-  source: 'Contact Form' | 'Portal Signup' | 'Walk-In Counseling';
+  source: LeadSource;
   status: 'New' | 'Counseling' | 'Enrolled';
   createdAt: string;
   notes?: string;
 }
+
+export interface SiteControlConfig {
+  showDemoPreview: boolean;
+  allowSelfSignupExplore: boolean;
+  communityReadOnly: boolean;
+  showCareersInHeader: boolean;
+  announcementText: string;
+  heroTaglinePrefix: string;
+  heroSubtitle: string;
+  whatsappNumber: string;
+  linkedinUrl: string;
+  youtubeUrl: string;
+  instagramUrl: string;
+}
+
+export interface ProvisionedStudent {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  trackId: PortalTrackId;
+  batchCode: string;
+  tempPassword: string;
+  status: 'Active' | 'Revoked';
+  createdAt: string;
+  source: 'WhatsApp Enrollment' | 'Walk-In Counseling' | 'Phone Inquiry' | 'Admin Provisioned';
+}
+
+export interface TeamMemberAccess {
+  id: string;
+  name: string;
+  email: string;
+  role: Exclude<PortalRole, 'student'>;
+  assignedTrackId?: PortalTrackId;
+  addedAt: string;
+}
+
+export interface CourseOverride {
+  duration?: string;
+  description?: string;
+}
+
+export type StoredCustomCourse = Omit<CourseItem, 'icon'>;
 
 export interface IssuedCertificate {
   id: string;
@@ -785,7 +847,92 @@ export const STORAGE_KEYS = {
   projectReviews: 'atozenius_portal_project_reviews_v1',
   leads: 'atozenius_portal_leads_v1',
   issuedCertificates: 'atozenius_portal_certificates_v1',
+  siteConfig: 'atozenius_portal_site_config_v1',
+  provisionedStudents: 'atozenius_portal_provisioned_students_v1',
+  teamAccess: 'atozenius_portal_team_access_v1',
+  customCourses: 'atozenius_portal_custom_courses_v1',
+  courseVisibility: 'atozenius_portal_course_visibility_v1',
+  courseOverrides: 'atozenius_portal_course_overrides_v1',
+  customMentors: 'atozenius_portal_custom_mentors_v1',
+  mentorVisibility: 'atozenius_portal_mentor_visibility_v1',
+  customStories: 'atozenius_portal_custom_stories_v1',
+  storyVisibility: 'atozenius_portal_story_visibility_v1',
+  customBlogPosts: 'atozenius_portal_custom_blog_v1',
+  blogVisibility: 'atozenius_portal_blog_visibility_v1',
 };
+
+export const SITE_CONFIG_EVENT = 'atozenius-config-updated';
+
+function emitSiteConfigChange(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(SITE_CONFIG_EVENT));
+  }
+}
+
+export const defaultSiteConfig: SiteControlConfig = {
+  showDemoPreview: true,
+  allowSelfSignupExplore: true,
+  communityReadOnly: false,
+  showCareersInHeader: true,
+  announcementText: '',
+  heroTaglinePrefix: 'Learn Better. Achieve Faster.',
+  heroSubtitle:
+    'Practical courses across IT, Pharma, Management & Agriculture—backed by 1-on-1 industry mentors, internships, and career placement support.',
+  whatsappNumber: '+91 9502886626',
+  linkedinUrl: 'https://www.linkedin.com/showcase/atozenius/',
+  youtubeUrl: 'https://www.youtube.com/@AtoZenius',
+  instagramUrl: 'https://www.instagram.com/atozenius',
+};
+
+const defaultTeamAccess: TeamMemberAccess[] = [
+  {
+    id: 'team-seed-admin',
+    name: 'AtoZenius Founder',
+    email: 'admin@atozenius.com',
+    role: 'admin',
+    assignedTrackId: 'ai-full-stack',
+    addedAt: 'System Default',
+  },
+  {
+    id: 'team-seed-staff',
+    name: 'AtoZenius Operations Team',
+    email: 'staff@atozenius.com',
+    role: 'staff',
+    assignedTrackId: 'ai-full-stack',
+    addedAt: 'System Default',
+  },
+  {
+    id: 'team-seed-mentor',
+    name: 'Turpati Durga Prasad',
+    email: 'mentor@atozenius.in',
+    role: 'mentor',
+    assignedTrackId: 'ai-full-stack',
+    addedAt: 'System Default',
+  },
+  {
+    id: 'team-seed-sairam',
+    name: 'Sairam Lankadasari',
+    email: 'sairam@faculty.atozenius.in',
+    role: 'mentor',
+    assignedTrackId: 'advanced-medical-coding',
+    addedAt: 'System Default',
+  },
+];
+
+const defaultProvisionedStudents: ProvisionedStudent[] = [
+  {
+    id: 'prov-seed-1',
+    name: 'Sneha Reddy',
+    email: 'sneha.r@example.com',
+    phone: '+91 9988776655',
+    trackId: 'data-science-analytics',
+    batchCode: 'Batch #DS-11',
+    tempPassword: 'ATZ-4821',
+    status: 'Active',
+    createdAt: 'Nov 25',
+    source: 'WhatsApp Enrollment',
+  },
+];
 
 export function readStorage<T>(key: string, fallback: T): T {
   try {
@@ -804,15 +951,40 @@ export function writeStorage<T>(key: string, value: T): void {
   }
 }
 
+export function getSiteConfig(): SiteControlConfig {
+  const saved = readStorage<Partial<SiteControlConfig> | null>(STORAGE_KEYS.siteConfig, null);
+  return { ...defaultSiteConfig, ...(saved || {}) };
+}
+
+export function saveSiteConfig(patch: Partial<SiteControlConfig>): SiteControlConfig {
+  const next = { ...getSiteConfig(), ...patch };
+  writeStorage(STORAGE_KEYS.siteConfig, next);
+  emitSiteConfigChange();
+  return next;
+}
+
+export function getWhatsappDigits(config: SiteControlConfig = getSiteConfig()): string {
+  const digits = config.whatsappNumber.replace(/\D/g, '');
+  if (!digits) return '919502886626';
+  return digits.length === 10 ? `91${digits}` : digits;
+}
+
 export function getSavedSession(): PortalSession | null {
   const saved = readStorage<Partial<PortalSession> | null>(STORAGE_KEYS.session, null);
-  if (!saved || !saved.email || !saved.trackId) return null;
+  if (!saved || !saved.email) return null;
+  const role: PortalRole = saved.role || 'student';
+  const trackId =
+    saved.trackId === undefined
+      ? role === 'student'
+        ? 'ai-full-stack'
+        : 'ai-full-stack'
+      : saved.trackId;
   return {
     name: saved.name || 'AtoZenius User',
     email: saved.email,
     initials: saved.initials || computeInitials(saved.name || 'AtoZenius'),
-    role: saved.role || 'student',
-    trackId: saved.trackId,
+    role,
+    trackId,
   };
 }
 
@@ -835,27 +1007,77 @@ export function computeInitials(name: string): string {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
+export function getTeamAccessList(): TeamMemberAccess[] {
+  const saved = readStorage<TeamMemberAccess[] | null>(STORAGE_KEYS.teamAccess, null);
+  return saved ?? defaultTeamAccess;
+}
+
+export function addTeamMemberAccess(
+  member: Omit<TeamMemberAccess, 'id' | 'addedAt'>
+): TeamMemberAccess[] {
+  const normalizedEmail = member.email.trim().toLowerCase();
+  const current = getTeamAccessList().filter(
+    (m) => m.email.trim().toLowerCase() !== normalizedEmail
+  );
+  const created: TeamMemberAccess = {
+    ...member,
+    email: normalizedEmail,
+    id: `team-${Date.now()}`,
+    addedAt: 'Just now',
+  };
+  const next = [created, ...current];
+  writeStorage(STORAGE_KEYS.teamAccess, next);
+  return next;
+}
+
+export function removeTeamMemberAccess(id: string): TeamMemberAccess[] {
+  const next = getTeamAccessList().filter((m) => m.id !== id);
+  writeStorage(STORAGE_KEYS.teamAccess, next);
+  return next;
+}
+
 export function detectRoleFromEmail(
   email: string,
-  fallbackTrackId: PortalTrackId = 'ai-full-stack'
-): { role: PortalRole; trackId: PortalTrackId; suggestedName: string } {
+  fallbackTrackId: PortalTrackId | null = 'ai-full-stack'
+): { role: PortalRole; trackId: PortalTrackId | null; suggestedName: string } {
   const normalized = email.trim().toLowerCase();
   const local = normalized.split('@')[0] || '';
   const domain = normalized.split('@')[1] || '';
 
-  // Staff detection: @atozenius.com or staff/ops/admin/admissions prefix
+  // 1. Live Team Access Registry takes priority
+  const teamMatch = getTeamAccessList().find(
+    (m) => m.email.trim().toLowerCase() === normalized
+  );
+  if (teamMatch) {
+    return {
+      role: teamMatch.role,
+      trackId: teamMatch.assignedTrackId || fallbackTrackId || 'ai-full-stack',
+      suggestedName: teamMatch.name,
+    };
+  }
+
+  // 2. Admin / Founder / Owner detection
+  if (/^(admin|founder|owner)/.test(local)) {
+    return {
+      role: 'admin',
+      trackId: fallbackTrackId || 'ai-full-stack',
+      suggestedName: 'AtoZenius Founder',
+    };
+  }
+
+  // 3. Staff detection: @atozenius.com or staff/ops/admissions/placement prefix
   if (
     domain === 'atozenius.com' ||
-    /^(staff|ops|admin|admissions|placement)/.test(local)
+    /^(staff|ops|admissions|placement)/.test(local)
   ) {
     return {
       role: 'staff',
-      trackId: fallbackTrackId,
+      trackId: fallbackTrackId || 'ai-full-stack',
       suggestedName: 'AtoZenius Operations Team',
     };
   }
 
-  // Mentor detection: mentor/faculty prefix or faculty email domain or known mentor names
+  // 4. Mentor detection: mentor/faculty prefix or faculty email domain or known mentor names
   if (
     domain === 'faculty.atozenius.in' ||
     /^(mentor|faculty|sairam|durga|turpati|ananya|aditya)/.test(local)
@@ -876,7 +1098,7 @@ export function detectRoleFromEmail(
     }
     return {
       role: 'mentor',
-      trackId: local.includes('durga') ? 'ai-full-stack' : fallbackTrackId,
+      trackId: local.includes('durga') ? 'ai-full-stack' : fallbackTrackId || 'ai-full-stack',
       suggestedName: 'Turpati Durga Prasad',
     };
   }
@@ -890,6 +1112,327 @@ export function detectRoleFromEmail(
     trackId: fallbackTrackId,
     suggestedName: formatted || 'AtoZenius Learner',
   };
+}
+
+export function resolveTrackIdFromProgram(program: string): PortalTrackId {
+  const lower = program.toLowerCase();
+  if (lower.includes('medical') || lower.includes('pharma') || lower.includes('clinical')) {
+    return 'advanced-medical-coding';
+  }
+  if (lower.includes('data') || lower.includes('analytics') || lower.includes('bi')) {
+    return 'data-science-analytics';
+  }
+  return 'ai-full-stack';
+}
+
+export function getProvisionedStudents(): ProvisionedStudent[] {
+  const saved = readStorage<ProvisionedStudent[] | null>(
+    STORAGE_KEYS.provisionedStudents,
+    null
+  );
+  return saved ?? defaultProvisionedStudents;
+}
+
+function generateTempPassword(): string {
+  const code = Math.floor(1000 + Math.random() * 9000);
+  return `ATZ-${code}`;
+}
+
+export function provisionStudentAccount(params: {
+  name: string;
+  email: string;
+  phone: string;
+  trackId: PortalTrackId;
+  source: ProvisionedStudent['source'];
+}): ProvisionedStudent {
+  const normalizedEmail = params.email.trim().toLowerCase();
+  const current = getProvisionedStudents();
+  const existing = current.find((s) => s.email.trim().toLowerCase() === normalizedEmail);
+  const track = portalTracks[params.trackId];
+
+  if (existing && existing.status === 'Active' && existing.trackId === params.trackId) {
+    return existing;
+  }
+
+  const record: ProvisionedStudent = {
+    id: existing?.id || `prov-${Date.now()}`,
+    name: params.name.trim(),
+    email: normalizedEmail,
+    phone: params.phone.trim() || getSiteConfig().whatsappNumber,
+    trackId: params.trackId,
+    batchCode: track.batchCode,
+    tempPassword: existing?.tempPassword || generateTempPassword(),
+    status: 'Active',
+    createdAt: existing?.createdAt || 'Just now',
+    source: params.source,
+  };
+
+  const filtered = current.filter((s) => s.email.trim().toLowerCase() !== normalizedEmail);
+  writeStorage(STORAGE_KEYS.provisionedStudents, [record, ...filtered]);
+  return record;
+}
+
+export function findProvisionedStudentByEmail(email: string): ProvisionedStudent | undefined {
+  const normalized = email.trim().toLowerCase();
+  return getProvisionedStudents().find((s) => s.email.trim().toLowerCase() === normalized);
+}
+
+export function resetProvisionedStudentPassword(id: string): ProvisionedStudent[] {
+  const updated = getProvisionedStudents().map((s) =>
+    s.id === id ? { ...s, tempPassword: generateTempPassword(), status: 'Active' as const } : s
+  );
+  writeStorage(STORAGE_KEYS.provisionedStudents, updated);
+  return updated;
+}
+
+export function updateProvisionedStudentBatch(
+  id: string,
+  trackId: PortalTrackId
+): ProvisionedStudent[] {
+  const batchCode = portalTracks[trackId].batchCode;
+  const updated = getProvisionedStudents().map((s) =>
+    s.id === id ? { ...s, trackId, batchCode } : s
+  );
+  writeStorage(STORAGE_KEYS.provisionedStudents, updated);
+  return updated;
+}
+
+export function toggleProvisionedStudentStatus(id: string): ProvisionedStudent[] {
+  const updated = getProvisionedStudents().map((s) =>
+    s.id === id
+      ? { ...s, status: (s.status === 'Active' ? 'Revoked' : 'Active') as 'Active' | 'Revoked' }
+      : s
+  );
+  writeStorage(STORAGE_KEYS.provisionedStudents, updated);
+  return updated;
+}
+
+export function claimBatchByCode(rawCode: string): PortalTrackId | null {
+  const cleaned = rawCode.trim().toUpperCase();
+  if (!cleaned) return null;
+
+  // Match explicit batch codes like FS-08, MC-14, DS-11
+  for (const id of allTrackIds) {
+    const code = portalTracks[id].batchCode.toUpperCase(); // e.g. BATCH #FS-08
+    const shortCode = code.replace('BATCH #', '');
+    if (cleaned === code || cleaned === shortCode || cleaned === `#${shortCode}`) {
+      return id;
+    }
+  }
+
+  // Match provisioned ATZ-XXXX temp access password
+  const provMatch = getProvisionedStudents().find(
+    (s) => s.status === 'Active' && s.tempPassword.toUpperCase() === cleaned
+  );
+  if (provMatch) {
+    return provMatch.trackId;
+  }
+
+  return null;
+}
+
+export function buildCredentialsWhatsAppUrl(params: {
+  name: string;
+  email: string;
+  phone: string;
+  batchCode: string;
+  courseTitle: string;
+  tempPassword: string;
+}): string {
+  const digits = params.phone.replace(/\D/g, '');
+  const targetPhone =
+    digits.length === 10
+      ? `91${digits}`
+      : digits || getWhatsappDigits();
+  const portalUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/get-started` : 'https://atozenius.in/get-started';
+  const msg = `Hi ${params.name}, welcome to AtoZenius (${params.courseTitle} · ${params.batchCode})!\n\nYour offline companion portal credentials:\nEmail: ${params.email}\nTemp Password: ${params.tempPassword}\nSign in here: ${portalUrl}`;
+  return `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+}
+
+const categoryIconMap: Record<CourseCategory, CourseItem['icon']> = {
+  'Advanced Courses': Cpu,
+  IT: Code2,
+  Pharma: Stethoscope,
+  'Non IT & Management': Briefcase,
+  Agriculture: Sprout,
+};
+
+export function getAllAdminCourses(): (CourseItem & { isHidden: boolean; isCustom?: boolean })[] {
+  const visibility = readStorage<Record<string, boolean>>(STORAGE_KEYS.courseVisibility, {});
+  const overrides = readStorage<Record<string, CourseOverride>>(STORAGE_KEYS.courseOverrides, {});
+  const customList = readStorage<StoredCustomCourse[]>(STORAGE_KEYS.customCourses, []);
+
+  const baseMapped = coursesData.map((c) => ({
+    ...c,
+    ...(overrides[c.id] || {}),
+    isHidden: visibility[c.id] === false,
+    isCustom: false,
+  }));
+
+  const customMapped = customList.map((c) => ({
+    ...c,
+    ...(overrides[c.id] || {}),
+    icon: categoryIconMap[c.category] || Code2,
+    isHidden: visibility[c.id] === false,
+    isCustom: true,
+  }));
+
+  return [...customMapped, ...baseMapped];
+}
+
+export function getResolvedCourses(): CourseItem[] {
+  return getAllAdminCourses().filter((c) => !c.isHidden);
+}
+
+export function toggleCourseVisibility(courseId: string): void {
+  const visibility = readStorage<Record<string, boolean>>(STORAGE_KEYS.courseVisibility, {});
+  const currentlyHidden = visibility[courseId] === false;
+  writeStorage(STORAGE_KEYS.courseVisibility, {
+    ...visibility,
+    [courseId]: currentlyHidden ? true : false,
+  });
+  emitSiteConfigChange();
+}
+
+export function saveCourseOverride(courseId: string, patch: CourseOverride): void {
+  const overrides = readStorage<Record<string, CourseOverride>>(STORAGE_KEYS.courseOverrides, {});
+  writeStorage(STORAGE_KEYS.courseOverrides, {
+    ...overrides,
+    [courseId]: { ...(overrides[courseId] || {}), ...patch },
+  });
+  emitSiteConfigChange();
+}
+
+export function addCustomCourse(course: Omit<StoredCustomCourse, 'id'>): StoredCustomCourse {
+  const current = readStorage<StoredCustomCourse[]>(STORAGE_KEYS.customCourses, []);
+  const created: StoredCustomCourse = {
+    ...course,
+    id: `custom-course-${Date.now()}`,
+  };
+  writeStorage(STORAGE_KEYS.customCourses, [created, ...current]);
+  emitSiteConfigChange();
+  return created;
+}
+
+export function getAllAdminMentors(): (MentorItem & { isHidden: boolean; isCustom?: boolean })[] {
+  const visibility = readStorage<Record<string, boolean>>(STORAGE_KEYS.mentorVisibility, {});
+  const custom = readStorage<MentorItem[]>(STORAGE_KEYS.customMentors, []);
+  const all = [
+    ...custom.map((m) => ({ ...m, isCustom: true })),
+    ...mentorsData.map((m) => ({ ...m, isCustom: false })),
+  ];
+  return all.map((m) => ({
+    ...m,
+    isHidden: visibility[m.id] === false,
+  }));
+}
+
+export function getResolvedMentors(): MentorItem[] {
+  return getAllAdminMentors().filter((m) => !m.isHidden);
+}
+
+export function toggleMentorVisibility(mentorId: string): void {
+  const visibility = readStorage<Record<string, boolean>>(STORAGE_KEYS.mentorVisibility, {});
+  const currentlyHidden = visibility[mentorId] === false;
+  writeStorage(STORAGE_KEYS.mentorVisibility, {
+    ...visibility,
+    [mentorId]: currentlyHidden ? true : false,
+  });
+  emitSiteConfigChange();
+}
+
+export function addCustomMentor(
+  mentor: Omit<MentorItem, 'id' | 'initials'>
+): MentorItem {
+  const current = readStorage<MentorItem[]>(STORAGE_KEYS.customMentors, []);
+  const created: MentorItem = {
+    ...mentor,
+    id: `custom-mentor-${Date.now()}`,
+    initials: computeInitials(mentor.name),
+  };
+  writeStorage(STORAGE_KEYS.customMentors, [created, ...current]);
+  emitSiteConfigChange();
+  return created;
+}
+
+export function getAllAdminStories(): (StudentStory & { isHidden: boolean; isCustom?: boolean })[] {
+  const visibility = readStorage<Record<string, boolean>>(STORAGE_KEYS.storyVisibility, {});
+  const custom = readStorage<StudentStory[]>(STORAGE_KEYS.customStories, []);
+  const all = [
+    ...custom.map((s) => ({ ...s, isCustom: true })),
+    ...studentStories.map((s) => ({ ...s, isCustom: false })),
+  ];
+  return all.map((s) => ({
+    ...s,
+    isHidden: visibility[s.id] === false,
+  }));
+}
+
+export function getResolvedStories(): StudentStory[] {
+  return getAllAdminStories().filter((s) => !s.isHidden);
+}
+
+export function toggleStoryVisibility(storyId: string): void {
+  const visibility = readStorage<Record<string, boolean>>(STORAGE_KEYS.storyVisibility, {});
+  const currentlyHidden = visibility[storyId] === false;
+  writeStorage(STORAGE_KEYS.storyVisibility, {
+    ...visibility,
+    [storyId]: currentlyHidden ? true : false,
+  });
+  emitSiteConfigChange();
+}
+
+export function addCustomStory(
+  story: Omit<StudentStory, 'id' | 'initials'>
+): StudentStory {
+  const current = readStorage<StudentStory[]>(STORAGE_KEYS.customStories, []);
+  const created: StudentStory = {
+    ...story,
+    id: `custom-story-${Date.now()}`,
+    initials: computeInitials(story.name),
+  };
+  writeStorage(STORAGE_KEYS.customStories, [created, ...current]);
+  emitSiteConfigChange();
+  return created;
+}
+
+export function getAllAdminBlogPosts(): (BlogPost & { isHidden: boolean; isCustom?: boolean })[] {
+  const visibility = readStorage<Record<string, boolean>>(STORAGE_KEYS.blogVisibility, {});
+  const custom = readStorage<BlogPost[]>(STORAGE_KEYS.customBlogPosts, []);
+  const all = [
+    ...custom.map((p) => ({ ...p, isCustom: true })),
+    ...blogPosts.map((p) => ({ ...p, isCustom: false })),
+  ];
+  return all.map((p) => ({
+    ...p,
+    isHidden: visibility[p.id] === false,
+  }));
+}
+
+export function getResolvedBlogPosts(): BlogPost[] {
+  return getAllAdminBlogPosts().filter((p) => !p.isHidden);
+}
+
+export function toggleBlogVisibility(postId: string): void {
+  const visibility = readStorage<Record<string, boolean>>(STORAGE_KEYS.blogVisibility, {});
+  const currentlyHidden = visibility[postId] === false;
+  writeStorage(STORAGE_KEYS.blogVisibility, {
+    ...visibility,
+    [postId]: currentlyHidden ? true : false,
+  });
+  emitSiteConfigChange();
+}
+
+export function addCustomBlogPost(post: Omit<BlogPost, 'id'>): BlogPost {
+  const current = readStorage<BlogPost[]>(STORAGE_KEYS.customBlogPosts, []);
+  const created: BlogPost = {
+    ...post,
+    id: `custom-post-${Date.now()}`,
+  };
+  writeStorage(STORAGE_KEYS.customBlogPosts, [created, ...current]);
+  emitSiteConfigChange();
+  return created;
 }
 
 export function getResolvedTrackData(trackId: PortalTrackId): PortalTrackData {
@@ -971,16 +1514,19 @@ export function getAdmissionsLeads(): AdmissionsLead[] {
 }
 
 export function addAdmissionsLead(
-  lead: Omit<AdmissionsLead, 'id' | 'status' | 'createdAt'>
-): void {
+  lead: Omit<AdmissionsLead, 'id' | 'status' | 'createdAt'> & {
+    status?: AdmissionsLead['status'];
+  }
+): AdmissionsLead {
   const current = getAdmissionsLeads();
   const next: AdmissionsLead = {
     ...lead,
     id: `lead-${Date.now()}`,
-    status: 'New',
+    status: lead.status ?? 'New',
     createdAt: 'Just now',
   };
   writeStorage(STORAGE_KEYS.leads, [next, ...current]);
+  return next;
 }
 
 export function updateAdmissionsLeadStatus(

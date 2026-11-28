@@ -19,7 +19,7 @@ interface MentorReviewsPageProps {
 }
 
 const MentorReviewsPage: React.FC<MentorReviewsPageProps> = ({ session, onSelectTrack }) => {
-  const track = getResolvedTrackData(session.trackId);
+  const track = getResolvedTrackData(session.trackId || 'ai-full-stack');
   const submissions = readStorage<Record<string, ProjectSubmissionRecord>>(
     STORAGE_KEYS.submissions,
     {}

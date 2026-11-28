@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Phone, MessageCircle, Mail, CheckCircle2, ChevronDown, Clock, MapPin } from 'lucide-react';
-import { coursesData } from '../data/courses';
-import { addAdmissionsLead } from '../data/portal';
+import {
+  addAdmissionsLead,
+  getResolvedCourses,
+  getSiteConfig,
+  getWhatsappDigits,
+} from '../data/portal';
 
 const contactFaqs = [
   {
@@ -24,10 +28,15 @@ const contactFaqs = [
 ];
 
 const ContactPage: React.FC = () => {
+  const siteConfig = getSiteConfig();
+  const whatsappDigits = getWhatsappDigits(siteConfig);
+  const resolvedCourses = getResolvedCourses();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [program, setProgram] = useState(coursesData[0].title);
+  const [program, setProgram] = useState(
+    resolvedCourses[0]?.title || 'AI Full-Stack Development'
+  );
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -35,7 +44,7 @@ const ContactPage: React.FC = () => {
   const whatsappText = encodeURIComponent(
     `Hi AtoZenius, my name is ${name || 'a prospective learner'}. I'd like details about ${program}. ${message}`
   );
-  const whatsappUrl = `https://wa.me/919502886626?text=${whatsappText}`;
+  const whatsappUrl = `https://wa.me/${whatsappDigits}?text=${whatsappText}`;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +90,7 @@ const ContactPage: React.FC = () => {
 
               <div className="space-y-5">
                 <a
-                  href="tel:9502886626"
+                  href={`tel:${whatsappDigits.replace(/^91/, '')}`}
                   className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors"
                 >
                   <div className="w-10 h-10 rounded-xl bg-brand-accent flex items-center justify-center shrink-0">
@@ -89,12 +98,12 @@ const ContactPage: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-xs text-white/50 uppercase tracking-wider font-bold">Phone</div>
-                    <div className="text-sm font-bold text-white">+91 9502886626</div>
+                    <div className="text-sm font-bold text-white">{siteConfig.whatsappNumber}</div>
                   </div>
                 </a>
 
                 <a
-                  href="https://api.whatsapp.com/send?phone=919502886626&text=Hi%2C%20Can%20we%20connect%20to%20get%20more%20details%20about%20AtoZenius%20Program%3F"
+                  href={`https://api.whatsapp.com/send?phone=${whatsappDigits}&text=Hi%2C%20Can%20we%20connect%20to%20get%20more%20details%20about%20AtoZenius%20Program%3F`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors"
@@ -215,7 +224,7 @@ const ContactPage: React.FC = () => {
                       onChange={(e) => setProgram(e.target.value)}
                       className="w-full px-4 py-3.5 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
                     >
-                      {coursesData.map((c) => (
+                      {resolvedCourses.map((c) => (
                         <option key={c.id} value={c.title}>
                           {c.title}
                         </option>

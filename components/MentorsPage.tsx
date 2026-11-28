@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, ArrowUpRight, CheckCircle2 } from 'lucide-react';
-import { mentorsData, mentorSpecialties, MentorItem, MentorSpecialty } from '../data/mentors';
+import { mentorSpecialties, MentorItem, MentorSpecialty } from '../data/mentors';
+import { getResolvedMentors } from '../data/portal';
 
 interface MentorsPageProps {
   onOpenAuth: () => void;
@@ -19,10 +20,12 @@ const MentorsPage: React.FC<MentorsPageProps> = ({ onOpenAuth }) => {
   const [selectedSpecialty, setSelectedSpecialty] = useState<MentorSpecialty>('All');
   const [bookedIds, setBookedIds] = useState<string[]>([]);
 
+  const resolvedMentors = getResolvedMentors();
+
   const filteredMentors =
     selectedSpecialty === 'All'
-      ? mentorsData
-      : mentorsData.filter((m) => m.specialty === selectedSpecialty);
+      ? resolvedMentors
+      : resolvedMentors.filter((m) => m.specialty === selectedSpecialty);
 
   const handleBook = (id: string) => {
     if (!bookedIds.includes(id)) {

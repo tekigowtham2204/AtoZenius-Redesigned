@@ -11,7 +11,11 @@ import {
   postBatchThread,
 } from '../../../data/portal';
 
-const StaffPlacementsPage: React.FC = () => {
+interface StaffPlacementsPageProps {
+  embedded?: boolean;
+}
+
+const StaffPlacementsPage: React.FC<StaffPlacementsPageProps> = ({ embedded = false }) => {
   const [certs, setCerts] = useState<IssuedCertificate[]>(() => getIssuedCertificates());
   const [studentName, setStudentName] = useState('');
   const [certTrackId, setCertTrackId] = useState<PortalTrackId>('ai-full-stack');
@@ -56,14 +60,9 @@ const StaffPlacementsPage: React.FC = () => {
     window.setTimeout(() => setAlertSent(false), 2000);
   };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.15 } }}
-      className="pt-28 md:pt-36 pb-24 min-h-screen bg-brand-cream"
-    >
-      <div className="container mx-auto px-6 max-w-6xl">
+  const content = (
+    <div className={embedded ? '' : 'container mx-auto px-6 max-w-6xl'}>
+      {!embedded && (
         <div className="mb-10 pb-6 border-b border-brand-dark/10">
           <p className="text-xs font-mono text-brand-accent font-semibold mb-2">
             Placements &amp; Credentials · Live Sync with /certifications &amp; Batch Community
@@ -72,8 +71,9 @@ const StaffPlacementsPage: React.FC = () => {
             Certificates &amp; Placement Desk.
           </h1>
         </div>
+      )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-12">
           {/* Issue Certificate Form */}
           <form
             onSubmit={handleIssueCertificate}
@@ -227,7 +227,19 @@ const StaffPlacementsPage: React.FC = () => {
             ))}
           </div>
         </div>
-      </div>
+    </div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.15 } }}
+      className="pt-28 md:pt-36 pb-24 min-h-screen bg-brand-cream"
+    >
+      {content}
     </motion.div>
   );
 };

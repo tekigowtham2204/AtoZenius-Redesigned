@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Star, ArrowRight, Quote } from 'lucide-react';
-import { storyTracks, studentStories, StoryTrack } from '../data/stories';
+import { storyTracks, StoryTrack } from '../data/stories';
+import { getResolvedStories } from '../data/portal';
 import { ViewState } from '../types';
 
 interface PlacementsPageProps {
@@ -11,11 +12,12 @@ interface PlacementsPageProps {
 
 const PlacementsPage: React.FC<PlacementsPageProps> = ({ onNavigate, onOpenAuth }) => {
   const [selectedTrack, setSelectedTrack] = useState<StoryTrack>('All');
+  const resolvedStories = getResolvedStories();
 
   const filteredStories =
     selectedTrack === 'All'
-      ? studentStories
-      : studentStories.filter((s) => s.track === selectedTrack);
+      ? resolvedStories
+      : resolvedStories.filter((s) => s.track === selectedTrack);
 
   return (
     <motion.div
