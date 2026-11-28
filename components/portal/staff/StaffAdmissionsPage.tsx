@@ -11,9 +11,9 @@ import {
 import {
   addAdmissionsLead,
   AdmissionsLead,
-  allTrackIds,
   buildCredentialsWhatsAppUrl,
   findProvisionedStudentByEmail,
+  getActiveTrackIds,
   getAdmissionsLeads,
   getResolvedTrackData,
   getWhatsappDigits,
@@ -292,7 +292,7 @@ const StaffAdmissionsPage: React.FC<StaffAdmissionsPageProps> = ({ embedded = fa
                 onChange={(e) => setTrackId(e.target.value as PortalTrackId)}
                 className="w-full px-4 py-3 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm font-semibold focus:outline-none focus:border-brand-accent"
               >
-                {allTrackIds.map((id) => {
+                {getActiveTrackIds().map((id) => {
                   const t = getResolvedTrackData(id);
                   return (
                     <option key={id} value={id}>

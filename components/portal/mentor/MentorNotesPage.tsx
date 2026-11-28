@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Save, CheckCircle2 } from 'lucide-react';
 import {
-  allTrackIds,
+  getActiveTrackIds,
   getResolvedTrackData,
   LectureNote,
   LectureOverride,
@@ -123,7 +123,7 @@ const MentorNotesPage: React.FC<MentorNotesPageProps> = ({ session, onSelectTrac
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {allTrackIds.map((id) => {
+            {getActiveTrackIds().map((id) => {
               const t = getResolvedTrackData(id);
               return (
                 <button

@@ -65,9 +65,16 @@
         scrollbar-width: none;
       }
       @media print {
+        @page {
+          size: A4;
+          margin: 14mm 16mm;
+        }
+        html,
         body {
           background: #FFFFFF !important;
           color: #050505 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
       }
     </style>

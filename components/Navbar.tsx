@@ -3,8 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronDown, LogOut, Award, BookOpen, Globe, LayoutDashboard, Users } from 'lucide-react';
 import { ViewState } from '../types';
 import {
+  getActiveTrackIds,
   getResolvedTrackData,
   getSiteConfig,
+  getTotalUnreadCount,
+  hasTeamPermission,
+  MESSENGER_UPDATED_EVENT,
   PortalRole,
   PortalSession,
   PortalTrackId,
@@ -32,12 +36,14 @@ const roleNavLinks: Record<PortalRole, { name: string; href: string; view: ViewS
     { name: 'My Notes', href: '/notes', view: 'notes' },
     { name: 'Projects', href: '/projects', view: 'projects' },
     { name: 'Community', href: '/community', view: 'community' },
+    { name: 'Messages', href: '/messages', view: 'messages' },
   ],
   mentor: [
     { name: 'Mentor Desk', href: '/mentor', view: 'mentor-desk' },
     { name: 'Notes Studio', href: '/mentor/notes', view: 'mentor-notes' },
     { name: 'Reviews', href: '/mentor/reviews', view: 'mentor-reviews' },
     { name: 'Batch Doubts', href: '/mentor/doubts', view: 'mentor-doubts' },
+    { name: 'Messages', href: '/mentor/messages', view: 'mentor-messages' },
   ],
   staff: [
     { name: 'Ops Hub', href: '/staff', view: 'staff-ops' },
@@ -45,10 +51,16 @@ const roleNavLinks: Record<PortalRole, { name: string; href: string; view: ViewS
     { name: 'Admissions', href: '/staff/admissions', view: 'staff-admissions' },
     { name: 'Placements', href: '/staff/placements', view: 'staff-placements' },
   ],
+  manager: [
+    { name: 'Overview', href: '/admin', view: 'admin-overview' },
+    { name: 'Edit Website', href: '/admin/website', view: 'admin-website' },
+    { name: 'Team & Access', href: '/admin/access', view: 'admin-access' },
+    { name: 'Operations', href: '/admin/operations', view: 'admin-operations' },
+  ],
   admin: [
     { name: 'Overview', href: '/admin', view: 'admin-overview' },
-    { name: 'Website CMS', href: '/admin/website', view: 'admin-website' },
-    { name: 'Access & Roles', href: '/admin/access', view: 'admin-access' },
+    { name: 'Edit Website', href: '/admin/website', view: 'admin-website' },
+    { name: 'Team & Access', href: '/admin/access', view: 'admin-access' },
     { name: 'Operations', href: '/admin/operations', view: 'admin-operations' },
   ],
 };
@@ -57,14 +69,9 @@ const roleHomeRoute: Record<PortalRole, ViewState> = {
   student: 'dashboard',
   mentor: 'mentor-desk',
   staff: 'staff-ops',
+  manager: 'admin-overview',
   admin: 'admin-overview',
 };
-
-const trackSwitcherItems: { id: PortalTrackId; label: string }[] = [
-  { id: 'ai-full-stack', label: 'AI Full-Stack (FS-08)' },
-  { id: 'advanced-medical-coding', label: 'Medical Coding (MC-14)' },
-  { id: 'data-science-analytics', label: 'Data Science (DS-11)' },
-];
 
 const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
@@ -78,13 +85,29 @@ const Navbar: React.FC<NavbarProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [siteConfig, setSiteConfig] = useState(() => getSiteConfig());
+  const [, setConfigTick] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const syncConfig = () => setSiteConfig(getSiteConfig());
+    const syncConfig = () => {
+      setSiteConfig(getSiteConfig());
+      setConfigTick((t) => t + 1);
+    };
     window.addEventListener(SITE_CONFIG_EVENT, syncConfig);
-    return () => window.removeEventListener(SITE_CONFIG_EVENT, syncConfig);
+    window.addEventListener(MESSENGER_UPDATED_EVENT, syncConfig);
+    return () => {
+      window.removeEventListener(SITE_CONFIG_EVENT, syncConfig);
+      window.removeEventListener(MESSENGER_UPDATED_EVENT, syncConfig);
+    };
   }, []);
+
+  const trackSwitcherItems: { id: PortalTrackId; label: string }[] = getActiveTrackIds().map(
+    (id) => {
+      const t = getResolvedTrackData(id);
+      const shortCode = t.batchCode.replace('Batch #', '');
+      return { id, label: `${t.courseTitle} (${shortCode})` };
+    }
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -107,14 +130,64 @@ const Navbar: React.FC<NavbarProps> = ({
   const visiblePublicLinks = siteConfig.showCareersInHeader
     ? publicNavLinks
     : publicNavLinks.filter((item) => item.view !== 'careers');
-  const navLinks = session ? roleNavLinks[session.role] : visiblePublicLinks;
+
+  const getFilteredRoleLinks = () => {
+    if (!session) return visiblePublicLinks;
+    if (session.role === 'manager') {
+      const links: { name: string; href: string; view: ViewState }[] = [];
+      if (hasTeamPermission(session, 'view_overview')) {
+        links.push({ name: 'Overview', href: '/admin', view: 'admin-overview' });
+      }
+      if (hasTeamPermission(session, 'edit_website')) {
+        links.push({ name: 'Edit Website', href: '/admin/website', view: 'admin-website' });
+      }
+      if (hasTeamPermission(session, 'manage_team')) {
+        links.push({ name: 'Team & Access', href: '/admin/access', view: 'admin-access' });
+      }
+      if (
+        hasTeamPermission(session, 'manage_admissions') ||
+        hasTeamPermission(session, 'manage_batches') ||
+        hasTeamPermission(session, 'manage_placements')
+      ) {
+        links.push({ name: 'Operations', href: '/admin/operations', view: 'admin-operations' });
+      }
+      return links.length > 0 ? links : roleNavLinks.manager;
+    }
+    if (session.role === 'staff') {
+      const links: { name: string; href: string; view: ViewState }[] = [
+        { name: 'Ops Hub', href: '/staff', view: 'staff-ops' },
+      ];
+      if (hasTeamPermission(session, 'manage_batches')) {
+        links.push({ name: 'Batches', href: '/staff/batches', view: 'staff-batches' });
+      }
+      if (hasTeamPermission(session, 'manage_admissions')) {
+        links.push({ name: 'Admissions', href: '/staff/admissions', view: 'staff-admissions' });
+      }
+      if (hasTeamPermission(session, 'manage_placements')) {
+        links.push({ name: 'Placements', href: '/staff/placements', view: 'staff-placements' });
+      }
+      if (hasTeamPermission(session, 'manage_team')) {
+        links.push({ name: 'Team & Access', href: '/admin/access', view: 'admin-access' });
+      }
+      if (hasTeamPermission(session, 'edit_website')) {
+        links.push({ name: 'Edit Website', href: '/admin/website', view: 'admin-website' });
+      }
+      return links;
+    }
+    return roleNavLinks[session.role];
+  };
+
+  const navLinks = getFilteredRoleLinks();
+  const unreadMessages = getTotalUnreadCount(session);
   const activeTrack =
     session && session.trackId ? getResolvedTrackData(session.trackId) : null;
   const roleBadge = session
     ? session.role === 'admin'
       ? 'Admin'
+      : session.role === 'manager'
+      ? session.title || 'Manager'
       : session.role === 'staff'
-      ? 'AtoZenius Staff'
+      ? session.title || 'AtoZenius Staff'
       : session.role === 'mentor'
       ? 'Faculty'
       : activeTrack?.batchCode || 'Onboarding'
@@ -151,13 +224,19 @@ const Navbar: React.FC<NavbarProps> = ({
                   e.preventDefault();
                   if (onNavigate) onNavigate(item.view);
                 }}
-                className={`text-sm font-medium transition-colors duration-200 ${
+                className={`text-sm font-medium transition-colors duration-200 inline-flex items-center gap-1.5 ${
                   currentView === item.view
                     ? 'text-brand-accent font-bold'
                     : 'text-brand-dark/70 hover:text-brand-dark'
                 }`}
               >
-                {item.name}
+                <span>{item.name}</span>
+                {(item.view === 'messages' || item.view === 'mentor-messages') &&
+                  unreadMessages > 0 && (
+                    <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-brand-accent text-white text-[10px] font-bold flex items-center justify-center">
+                      {unreadMessages}
+                    </span>
+                  )}
               </a>
             ))}
 
@@ -361,7 +440,7 @@ const Navbar: React.FC<NavbarProps> = ({
               <a
                 key={item.name}
                 href={item.href}
-                className={`text-3xl font-bold transition-colors tracking-tight ${
+                className={`text-3xl font-bold transition-colors tracking-tight inline-flex items-center gap-3 ${
                   currentView === item.view
                     ? 'text-brand-accent'
                     : 'text-brand-dark hover:text-brand-accent'
@@ -372,7 +451,13 @@ const Navbar: React.FC<NavbarProps> = ({
                   if (onNavigate) onNavigate(item.view);
                 }}
               >
-                {item.name}
+                <span>{item.name}</span>
+                {(item.view === 'messages' || item.view === 'mentor-messages') &&
+                  unreadMessages > 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-brand-accent text-white text-xs font-bold">
+                      {unreadMessages}
+                    </span>
+                  )}
               </a>
             ))}
 

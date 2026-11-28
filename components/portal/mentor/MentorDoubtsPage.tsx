@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Pin, Send, ShieldCheck } from 'lucide-react';
 import {
-  allTrackIds,
   computeInitials,
+  getActiveTrackIds,
   getResolvedTrackData,
   PortalSession,
   PortalTrackId,
@@ -82,7 +82,7 @@ const MentorDoubtsPage: React.FC<MentorDoubtsPageProps> = ({ session, onSelectTr
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {allTrackIds.map((id) => {
+            {getActiveTrackIds().map((id) => {
               const t = getResolvedTrackData(id);
               return (
                 <button

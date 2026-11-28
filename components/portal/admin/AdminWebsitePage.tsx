@@ -24,6 +24,7 @@ import {
   getAllAdminCourses,
   getAllAdminMentors,
   getAllAdminStories,
+  getCohortsForCourse,
   getSiteConfig,
   saveCourseOverride,
   saveSiteConfig,
@@ -188,8 +189,8 @@ const AdminWebsitePage: React.FC = () => {
   const tabs: { id: CmsTab; label: string; icon: React.ElementType }[] = [
     { id: 'brand', label: 'Brand & Contact', icon: Globe },
     { id: 'courses', label: `Courses (${courses.filter((c) => !c.isHidden).length}/${courses.length})`, icon: BookOpen },
-    { id: 'mentors-stories', label: 'Mentors & Stories', icon: Users },
-    { id: 'blog', label: `Blog Journal (${posts.filter((p) => !p.isHidden).length})`, icon: FileText },
+    { id: 'mentors-stories', label: 'Mentors & Reviews', icon: Users },
+    { id: 'blog', label: `Blog (${posts.filter((p) => !p.isHidden).length})`, icon: FileText },
   ];
 
   return (
@@ -203,10 +204,10 @@ const AdminWebsitePage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 pb-6 border-b border-brand-dark/10">
           <div>
             <p className="text-xs font-mono uppercase tracking-widest text-brand-accent font-semibold mb-2">
-              Live Content Management Studio
+              Website Editor
             </p>
             <h1 className="text-3xl sm:text-5xl font-bold text-brand-dark tracking-tighter">
-              Website CMS.
+              Edit Website.
             </h1>
           </div>
           {notice && (
@@ -424,6 +425,7 @@ const AdminWebsitePage: React.FC = () => {
             <div className="lg:col-span-7 space-y-3">
               {courses.map((course) => {
                 const isEditing = editingCourseId === course.id;
+                const linkedCohorts = getCohortsForCourse(course.id);
                 return (
                   <div
                     key={course.id}
@@ -437,6 +439,11 @@ const AdminWebsitePage: React.FC = () => {
                           {course.category} · {course.duration} {course.isCustom ? '· Custom' : ''}
                         </div>
                         <h3 className="text-base font-bold text-brand-dark">{course.title}</h3>
+                        <div className="text-[11px] font-mono text-brand-dark/55 mt-0.5">
+                          {linkedCohorts.length > 0
+                            ? `Running Batches: ${linkedCohorts.map((b) => b.batchCode).join(', ')}`
+                            : 'No active batch yet — launch one under Operations → Batches'}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-2">

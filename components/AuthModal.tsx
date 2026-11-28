@@ -11,13 +11,13 @@ import {
 import { ViewState } from '../types';
 import {
   addAdmissionsLead,
+  BasePortalTrackId,
   computeInitials,
   detectRoleFromEmail,
   findProvisionedStudentByEmail,
   getSiteConfig,
   getWhatsappDigits,
   PortalSession,
-  PortalTrackId,
 } from '../data/portal';
 
 interface AuthModalProps {
@@ -25,7 +25,7 @@ interface AuthModalProps {
   onLogin: (session: PortalSession) => void;
 }
 
-const trackOptions: { id: PortalTrackId; code: string; shortLabel: string }[] = [
+const trackOptions: { id: BasePortalTrackId; code: string; shortLabel: string }[] = [
   { id: 'ai-full-stack', code: 'FS-08', shortLabel: 'AI Full-Stack' },
   { id: 'advanced-medical-coding', code: 'MC-14', shortLabel: 'Medical Coding' },
   { id: 'data-science-analytics', code: 'DS-11', shortLabel: 'Data Science' },
@@ -114,11 +114,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ onNavigate, onLogin }) => {
       initials: computeInitials(resolvedName),
       role: detected.role,
       trackId: detected.trackId,
+      title: detected.title,
+      permissions: detected.permissions,
     });
   };
 
-  const handleQuickDemo = (trackId: PortalTrackId) => {
-    const demoNames: Record<PortalTrackId, string> = {
+  const handleQuickDemo = (trackId: BasePortalTrackId) => {
+    const demoNames: Record<BasePortalTrackId, string> = {
       'ai-full-stack': 'Kalyan Karadi',
       'advanced-medical-coding': 'Mukul Chowdary',
       'data-science-analytics': 'Siva Yarra',

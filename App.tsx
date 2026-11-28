@@ -21,6 +21,7 @@ import DashboardPage from './components/portal/DashboardPage';
 import NotesPage from './components/portal/NotesPage';
 import ProjectsPage from './components/portal/ProjectsPage';
 import CommunityPage from './components/portal/CommunityPage';
+import MessagesPage from './components/portal/MessagesPage';
 import MentorDeskPage from './components/portal/mentor/MentorDeskPage';
 import MentorNotesPage from './components/portal/mentor/MentorNotesPage';
 import MentorReviewsPage from './components/portal/mentor/MentorReviewsPage';
@@ -32,9 +33,10 @@ import StaffPlacementsPage from './components/portal/staff/StaffPlacementsPage';
 import AdminOverviewPage from './components/portal/admin/AdminOverviewPage';
 import AdminWebsitePage from './components/portal/admin/AdminWebsitePage';
 import AdminAccessPage from './components/portal/admin/AdminAccessPage';
-import AdminOperationsPage from './components/portal/admin/AdminOperationsPage';
+import AdminOperationsPage, { OperationsTab } from './components/portal/admin/AdminOperationsPage';
 import {
   getSavedSession,
+  hasTeamPermission,
   PortalRole,
   PortalSession,
   PortalTrackId,
@@ -50,8 +52,14 @@ const infoViews: InfoPageType[] = [
   'terms',
 ];
 
-const studentViews: ViewState[] = ['dashboard', 'notes', 'projects', 'community'];
-const mentorViews: ViewState[] = ['mentor-desk', 'mentor-notes', 'mentor-reviews', 'mentor-doubts'];
+const studentViews: ViewState[] = ['dashboard', 'notes', 'projects', 'community', 'messages'];
+const mentorViews: ViewState[] = [
+  'mentor-desk',
+  'mentor-notes',
+  'mentor-reviews',
+  'mentor-doubts',
+  'mentor-messages',
+];
 const staffViews: ViewState[] = ['staff-ops', 'staff-batches', 'staff-admissions', 'staff-placements'];
 const adminViews: ViewState[] = ['admin-overview', 'admin-website', 'admin-access', 'admin-operations'];
 const allProtectedViews: ViewState[] = [
@@ -61,8 +69,12 @@ const allProtectedViews: ViewState[] = [
   ...adminViews,
 ];
 
-const roleHome = (role: PortalRole): ViewState => {
+const roleHome = (role: PortalRole, session?: PortalSession | null): ViewState => {
   if (role === 'admin') return 'admin-overview';
+  if (role === 'manager') {
+    if (session && hasTeamPermission(session, 'view_overview')) return 'admin-overview';
+    return 'admin-operations';
+  }
   if (role === 'mentor') return 'mentor-desk';
   if (role === 'staff') return 'staff-ops';
   return 'dashboard';
@@ -78,7 +90,30 @@ const guardViewForSession = (requested: ViewState, session: PortalSession | null
     return requested;
   }
   if (session.role === 'mentor' && !mentorViews.includes(requested)) return 'mentor-desk';
-  if (session.role === 'staff' && !staffViews.includes(requested)) return 'staff-ops';
+  if (session.role === 'manager') {
+    if (requested === 'admin-overview' && hasTeamPermission(session, 'view_overview')) return requested;
+    if (requested === 'admin-website' && hasTeamPermission(session, 'edit_website')) return requested;
+    if (requested === 'admin-access' && hasTeamPermission(session, 'manage_team')) return requested;
+    if (
+      requested === 'admin-operations' &&
+      (hasTeamPermission(session, 'manage_admissions') ||
+        hasTeamPermission(session, 'manage_batches') ||
+        hasTeamPermission(session, 'manage_placements'))
+    ) {
+      return requested;
+    }
+    return roleHome('manager', session);
+  }
+  if (session.role === 'staff') {
+    if (requested === 'staff-ops') return requested;
+    if (requested === 'staff-batches' && hasTeamPermission(session, 'manage_batches')) return requested;
+    if (requested === 'staff-admissions' && hasTeamPermission(session, 'manage_admissions')) return requested;
+    if (requested === 'staff-placements' && hasTeamPermission(session, 'manage_placements')) return requested;
+    if (requested === 'admin-access' && hasTeamPermission(session, 'manage_team')) return requested;
+    if (requested === 'admin-website' && hasTeamPermission(session, 'edit_website')) return requested;
+    if (requested === 'admin-overview' && hasTeamPermission(session, 'view_overview')) return requested;
+    return 'staff-ops';
+  }
   return requested;
 };
 
@@ -109,10 +144,12 @@ const pathToView = (path: string): ViewState => {
   if (normalized === '/notes') return 'notes';
   if (normalized === '/projects') return 'projects';
   if (normalized === '/community') return 'community';
+  if (normalized === '/messages') return 'messages';
   if (normalized === '/mentor') return 'mentor-desk';
   if (normalized === '/mentor/notes') return 'mentor-notes';
   if (normalized === '/mentor/reviews') return 'mentor-reviews';
   if (normalized === '/mentor/doubts') return 'mentor-doubts';
+  if (normalized === '/mentor/messages') return 'mentor-messages';
   if (normalized === '/staff') return 'staff-ops';
   if (normalized === '/staff/batches') return 'staff-batches';
   if (normalized === '/staff/admissions') return 'staff-admissions';
@@ -146,10 +183,12 @@ const viewToPath = (view: ViewState): string => {
     case 'notes': route = '/notes'; break;
     case 'projects': route = '/projects'; break;
     case 'community': route = '/community'; break;
+    case 'messages': route = '/messages'; break;
     case 'mentor-desk': route = '/mentor'; break;
     case 'mentor-notes': route = '/mentor/notes'; break;
     case 'mentor-reviews': route = '/mentor/reviews'; break;
     case 'mentor-doubts': route = '/mentor/doubts'; break;
+    case 'mentor-messages': route = '/mentor/messages'; break;
     case 'staff-ops': route = '/staff'; break;
     case 'staff-batches': route = '/staff/batches'; break;
     case 'staff-admissions': route = '/staff/admissions'; break;
@@ -185,18 +224,20 @@ const viewTitles: Record<ViewState, string> = {
   notes: 'Personalized Study Notes - AtoZenius',
   projects: 'Projects & Certificates - AtoZenius',
   community: 'Batch Community - AtoZenius',
+  messages: 'Messages - AtoZenius',
   'mentor-desk': 'Mentor Desk - AtoZenius',
   'mentor-notes': 'Notes Studio - AtoZenius',
   'mentor-reviews': 'Capstone Reviews - AtoZenius',
   'mentor-doubts': 'Batch Doubt Queue - AtoZenius',
+  'mentor-messages': 'Mentor Messages - AtoZenius',
   'staff-ops': 'Operations Hub - AtoZenius',
   'staff-batches': 'Offline Batches - AtoZenius',
   'staff-admissions': 'Admissions Pipeline - AtoZenius',
   'staff-placements': 'Certificates & Placements - AtoZenius',
-  'admin-overview': 'Admin Overview - AtoZenius',
-  'admin-website': 'Website CMS - AtoZenius',
-  'admin-access': 'Access & Roles - AtoZenius',
-  'admin-operations': 'Admin Operations - AtoZenius',
+  'admin-overview': 'Overview - AtoZenius',
+  'admin-website': 'Edit Website - AtoZenius',
+  'admin-access': 'Team & Access - AtoZenius',
+  'admin-operations': 'Operations - AtoZenius',
 };
 
 const App: React.FC = () => {
@@ -216,6 +257,8 @@ const App: React.FC = () => {
 
   const [activeLectureId, setActiveLectureId] = useState<string | null>(null);
   const [communityTopicPrefill, setCommunityTopicPrefill] = useState<string | null>(null);
+  const [messengerTopicPrefill, setMessengerTopicPrefill] = useState<string | null>(null);
+  const [adminOperationsTab, setAdminOperationsTab] = useState<OperationsTab>('admissions');
 
   useEffect(() => {
     document.title = viewTitles[currentView];
@@ -250,7 +293,7 @@ const App: React.FC = () => {
   };
 
   const handleOpenAuth = () => {
-    navigateTo(session ? roleHome(session.role) : 'auth');
+    navigateTo(session ? roleHome(session.role, session) : 'auth');
   };
 
   const handleLogin = (newSession: PortalSession) => {
@@ -258,7 +301,8 @@ const App: React.FC = () => {
     setSession(newSession);
     setActiveLectureId(null);
     setCommunityTopicPrefill(null);
-    const landingRoute = roleHome(newSession.role);
+    setMessengerTopicPrefill(null);
+    const landingRoute = roleHome(newSession.role, newSession);
     const targetPath = viewToPath(landingRoute);
     if (window.location.pathname !== targetPath) {
       window.history.pushState({ view: landingRoute }, '', targetPath);
@@ -289,6 +333,11 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleOpenAdminOperations = (tab: OperationsTab) => {
+    setAdminOperationsTab(tab);
+    navigateTo('admin-operations');
+  };
+
   const handleOpenLecture = (lectureId: string) => {
     setActiveLectureId(lectureId);
     navigateTo('notes');
@@ -297,6 +346,11 @@ const App: React.FC = () => {
   const handleAskDoubtFromNote = (lectureLabel: string) => {
     setCommunityTopicPrefill(lectureLabel);
     navigateTo('community');
+  };
+
+  const handleMessageMentor = (topicLabel: string) => {
+    setMessengerTopicPrefill(topicLabel);
+    navigateTo('messages');
   };
 
   return (
@@ -414,6 +468,7 @@ const App: React.FC = () => {
                 onNavigate={navigateTo}
                 onOpenLecture={handleOpenLecture}
                 onSelectTrack={handleSwitchTrack}
+                onOpenMessages={() => navigateTo('messages')}
               />
             )}
 
@@ -423,11 +478,16 @@ const App: React.FC = () => {
                 session={session}
                 initialLectureId={activeLectureId}
                 onAskDoubt={handleAskDoubtFromNote}
+                onMessageMentor={handleMessageMentor}
               />
             )}
 
             {currentView === 'projects' && session && (
-              <ProjectsPage key="projects" session={session} />
+              <ProjectsPage
+                key="projects"
+                session={session}
+                onMessageMentor={handleMessageMentor}
+              />
             )}
 
             {currentView === 'community' && session && (
@@ -435,6 +495,15 @@ const App: React.FC = () => {
                 key="community"
                 session={session}
                 prefillLecture={communityTopicPrefill}
+                onOpenMessages={() => navigateTo('messages')}
+              />
+            )}
+
+            {currentView === 'messages' && session && (
+              <MessagesPage
+                key="messages"
+                session={session}
+                initialLectureRef={messengerTopicPrefill}
               />
             )}
 
@@ -472,6 +541,14 @@ const App: React.FC = () => {
               />
             )}
 
+            {currentView === 'mentor-messages' && session && (
+              <MessagesPage
+                key="mentor-messages"
+                session={session}
+                onSelectTrack={handleSwitchTrack}
+              />
+            )}
+
             {/* Staff Operations Routes */}
             {currentView === 'staff-ops' && session && (
               <StaffOpsPage
@@ -499,6 +576,7 @@ const App: React.FC = () => {
                 key="admin-overview"
                 session={session}
                 onNavigate={navigateTo}
+                onOpenOperations={handleOpenAdminOperations}
               />
             )}
 
@@ -511,7 +589,11 @@ const App: React.FC = () => {
             )}
 
             {currentView === 'admin-operations' && session && (
-              <AdminOperationsPage key="admin-operations" />
+              <AdminOperationsPage
+                key="admin-operations"
+                session={session}
+                initialTab={adminOperationsTab}
+              />
             )}
 
             {infoViews.includes(currentView as InfoPageType) && (

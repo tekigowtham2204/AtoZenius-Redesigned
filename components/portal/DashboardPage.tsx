@@ -13,8 +13,8 @@ import {
   Bookmark,
 } from 'lucide-react';
 import {
-  allTrackIds,
   claimBatchByCode,
+  getActiveTrackIds,
   getResolvedTrackData,
   getSiteConfig,
   getWhatsappDigits,
@@ -32,6 +32,7 @@ interface DashboardPageProps {
   onNavigate: (view: ViewState) => void;
   onOpenLecture: (lectureId: string) => void;
   onSelectTrack?: (trackId: PortalTrackId) => void;
+  onOpenMessages?: () => void;
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -39,6 +40,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigate,
   onOpenLecture,
   onSelectTrack,
+  onOpenMessages,
 }) => {
   const [batchCodeInput, setBatchCodeInput] = useState('');
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -139,7 +141,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {allTrackIds.map((id) => {
+                {getActiveTrackIds().map((id) => {
                   const t = getResolvedTrackData(id);
                   return (
                     <div
@@ -276,14 +278,23 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               >
                 Open today’s notes <ArrowRight size={14} />
               </button>
-              <a
-                href={track.whatsappGroupUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => (onOpenMessages ? onOpenMessages() : onNavigate('messages'))}
                 className="px-5 py-3 border border-white/20 text-white rounded-full text-xs font-bold hover:border-white/50 transition-colors inline-flex items-center gap-1.5"
               >
-                <MessageCircle size={14} /> Batch WhatsApp
-              </a>
+                <MessageCircle size={14} /> Message Mentor
+              </button>
+              {siteConfig.enableBatchWhatsAppLinks && (
+                <a
+                  href={track.whatsappGroupUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-3 border border-white/15 text-white/75 rounded-full text-xs font-bold hover:border-white/40 transition-colors inline-flex items-center gap-1.5"
+                >
+                  Batch WhatsApp
+                </a>
+              )}
             </div>
           </div>
 

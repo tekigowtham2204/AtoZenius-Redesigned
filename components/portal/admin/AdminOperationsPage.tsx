@@ -1,20 +1,52 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, Calendar, UserPlus } from 'lucide-react';
+import { hasTeamPermission, PortalSession, TeamPermission } from '../../../data/portal';
 import StaffAdmissionsPage from '../staff/StaffAdmissionsPage';
 import StaffBatchesPage from '../staff/StaffBatchesPage';
 import StaffPlacementsPage from '../staff/StaffPlacementsPage';
 
-type OperationsTab = 'admissions' | 'batches' | 'placements';
+export type OperationsTab = 'admissions' | 'batches' | 'placements';
 
-const AdminOperationsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<OperationsTab>('admissions');
+interface AdminOperationsPageProps {
+  session?: PortalSession;
+  initialTab?: OperationsTab;
+}
 
-  const tabs: { id: OperationsTab; label: string; icon: React.ElementType }[] = [
-    { id: 'admissions', label: 'Admissions & Walk-Ins', icon: UserPlus },
-    { id: 'batches', label: 'Offline Batches', icon: Calendar },
-    { id: 'placements', label: 'Certificates & Alerts', icon: Award },
-  ];
+const allTabs: {
+  id: OperationsTab;
+  label: string;
+  icon: React.ElementType;
+  permission: TeamPermission;
+}[] = [
+  { id: 'admissions', label: 'Admissions', icon: UserPlus, permission: 'manage_admissions' },
+  { id: 'batches', label: 'Batches', icon: Calendar, permission: 'manage_batches' },
+  {
+    id: 'placements',
+    label: 'Certificates & Hiring',
+    icon: Award,
+    permission: 'manage_placements',
+  },
+];
+
+const AdminOperationsPage: React.FC<AdminOperationsPageProps> = ({
+  session,
+  initialTab = 'admissions',
+}) => {
+  const visibleTabs = session
+    ? allTabs.filter((tab) => hasTeamPermission(session, tab.permission))
+    : allTabs;
+  const fallbackTabs = visibleTabs.length > 0 ? visibleTabs : allTabs;
+
+  const resolveTab = (requested: OperationsTab): OperationsTab =>
+    fallbackTabs.some((t) => t.id === requested) ? requested : fallbackTabs[0].id;
+
+  const requestedTab = initialTab as OperationsTab;
+  const [activeTab, setActiveTab] = useState<OperationsTab>(() => resolveTab(requestedTab));
+
+  useEffect(() => {
+    setActiveTab(resolveTab(requestedTab));
+  }, [requestedTab]);
 
   return (
     <motion.div
@@ -27,7 +59,7 @@ const AdminOperationsPage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 pb-6 border-b border-brand-dark/10">
           <div>
             <p className="text-xs font-mono uppercase tracking-widest text-brand-accent font-semibold mb-2">
-              Unified Owner Operations Desk
+              Daily Operations
             </p>
             <h1 className="text-3xl sm:text-5xl font-bold text-brand-dark tracking-tighter">
               Operations.
@@ -35,7 +67,7 @@ const AdminOperationsPage: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => {
+            {fallbackTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (

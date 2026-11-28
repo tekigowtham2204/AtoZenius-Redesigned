@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, MapPin, Calendar, Users, Award, UserPlus } from 'lucide-react';
 import {
-  allTrackIds,
+  getActiveTrackIds,
   getAdmissionsLeads,
   getIssuedCertificates,
   getResolvedTrackData,
@@ -18,6 +18,7 @@ interface StaffOpsPageProps {
 const StaffOpsPage: React.FC<StaffOpsPageProps> = ({ session, onNavigate }) => {
   const leads = getAdmissionsLeads();
   const certs = getIssuedCertificates();
+  const activeTrackIds = getActiveTrackIds();
   const openLeads = leads.filter((l) => l.status !== 'Enrolled').length;
 
   return (
@@ -49,7 +50,7 @@ const StaffOpsPage: React.FC<StaffOpsPageProps> = ({ session, onNavigate }) => {
               <span className="text-[11px] font-mono uppercase tracking-wider text-brand-dark/45 block mb-2">
                 Active Offline Cohorts
               </span>
-              <div className="text-3xl font-extrabold text-brand-dark">{allTrackIds.length}</div>
+              <div className="text-3xl font-extrabold text-brand-dark">{activeTrackIds.length}</div>
               <button
                 type="button"
                 onClick={() => onNavigate('staff-batches')}
@@ -111,7 +112,7 @@ const StaffOpsPage: React.FC<StaffOpsPageProps> = ({ session, onNavigate }) => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {allTrackIds.map((id) => {
+          {activeTrackIds.map((id) => {
             const track = getResolvedTrackData(id);
             return (
               <article

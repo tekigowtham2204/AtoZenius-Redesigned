@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Calendar, MapPin, ClipboardCheck, MessageSquare, BookOpen } from 'lucide-react';
 import {
-  allTrackIds,
+  getActiveTrackIds,
   getResolvedTrackData,
   PortalSession,
   PortalTrackId,
@@ -64,7 +64,7 @@ const MentorDeskPage: React.FC<MentorDeskPageProps> = ({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {allTrackIds.map((id) => {
+            {getActiveTrackIds().map((id) => {
               const t = getResolvedTrackData(id);
               const isSelected = id === session.trackId;
               return (
@@ -121,6 +121,13 @@ const MentorDeskPage: React.FC<MentorDeskPageProps> = ({
                 className="px-5 py-3 border border-white/20 text-white rounded-full text-xs font-bold hover:border-white/50 transition-colors"
               >
                 Pin Batch Announcement
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate('mentor-messages')}
+                className="px-5 py-3 border border-white/20 text-white rounded-full text-xs font-bold hover:border-white/50 transition-colors"
+              >
+                Open Student Messages
               </button>
             </div>
           </div>

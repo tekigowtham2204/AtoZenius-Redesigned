@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, ExternalLink } from 'lucide-react';
 import {
-  allTrackIds,
+  getActiveTrackIds,
   getResolvedTrackData,
   PortalSession,
   PortalTrackId,
@@ -66,7 +66,7 @@ const MentorReviewsPage: React.FC<MentorReviewsPageProps> = ({ session, onSelect
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {allTrackIds.map((id) => {
+            {getActiveTrackIds().map((id) => {
               const t = getResolvedTrackData(id);
               return (
                 <button

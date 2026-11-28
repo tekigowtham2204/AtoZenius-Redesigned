@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, CheckCircle2, Send, ShieldCheck } from 'lucide-react';
 import {
-  allTrackIds,
+  getActiveTrackIds,
   getIssuedCertificates,
   getResolvedTrackData,
   IssuedCertificate,
@@ -112,7 +112,7 @@ const StaffPlacementsPage: React.FC<StaffPlacementsPageProps> = ({ embedded = fa
                 onChange={(e) => setCertTrackId(e.target.value as PortalTrackId)}
                 className="w-full px-4 py-3.5 rounded-xl bg-brand-cream border border-brand-dark/10 text-sm focus:outline-none focus:border-brand-accent"
               >
-                {allTrackIds.map((id) => {
+                {getActiveTrackIds().map((id) => {
                   const t = getResolvedTrackData(id);
                   return (
                     <option key={id} value={id}>
@@ -162,7 +162,7 @@ const StaffPlacementsPage: React.FC<StaffPlacementsPageProps> = ({ embedded = fa
                 onChange={(e) => setAlertTrackId(e.target.value as PortalTrackId)}
                 className="w-full px-4 py-3.5 rounded-xl bg-white/10 border border-white/15 text-sm text-white focus:outline-none focus:border-[#60A5FA]"
               >
-                {allTrackIds.map((id) => {
+                {getActiveTrackIds().map((id) => {
                   const t = getResolvedTrackData(id);
                   return (
                     <option key={id} value={id} className="text-brand-dark">

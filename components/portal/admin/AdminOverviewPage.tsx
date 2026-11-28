@@ -4,13 +4,14 @@ import {
   Activity,
   ArrowRight,
   CheckCircle2,
+  KeyRound,
   Megaphone,
   Shield,
   Sliders,
   Users,
 } from 'lucide-react';
 import {
-  allTrackIds,
+  getActiveTrackIds,
   getAdmissionsLeads,
   getIssuedCertificates,
   getProvisionedStudents,
@@ -18,6 +19,7 @@ import {
   getResolvedMentors,
   getResolvedTrackData,
   getSiteConfig,
+  getTeamAccessList,
   PortalSession,
   ProjectReviewOverride,
   ProjectSubmissionRecord,
@@ -27,19 +29,26 @@ import {
   STORAGE_KEYS,
 } from '../../../data/portal';
 import { ViewState } from '../../../types';
+import { OperationsTab } from './AdminOperationsPage';
 
 interface AdminOverviewPageProps {
   session: PortalSession;
   onNavigate: (view: ViewState) => void;
+  onOpenOperations?: (tab: OperationsTab) => void;
 }
 
-const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({ session, onNavigate }) => {
+const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({
+  session,
+  onNavigate,
+  onOpenOperations,
+}) => {
   const [config, setConfig] = useState<SiteControlConfig>(() => getSiteConfig());
   const [announcementDraft, setAnnouncementDraft] = useState(config.announcementText);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
 
   const leads = getAdmissionsLeads();
   const provisioned = getProvisionedStudents();
+  const teamMembers = getTeamAccessList();
   const certs = getIssuedCertificates();
   const visibleCourses = getResolvedCourses();
   const visibleMentors = getResolvedMentors();
@@ -59,13 +68,19 @@ const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({ session, onNaviga
   const counselingLeads = leads.filter((l) => l.status === 'Counseling').length;
   const enrolledLeads = leads.filter((l) => l.status === 'Enrolled').length;
   const activeProvisioned = provisioned.filter((s) => s.status === 'Active').length;
+  const revokedProvisioned = provisioned.filter((s) => s.status === 'Revoked').length;
 
+  const adminCount = teamMembers.filter((m) => m.role === 'admin').length;
+  const mentorCount = teamMembers.filter((m) => m.role === 'mentor').length;
+  const staffCount = teamMembers.filter((m) => m.role === 'staff').length;
+
+  const activeTrackIds = getActiveTrackIds();
   let lecturesRevisedCount = 0;
   let notesBookmarkedCount = 0;
   let projectsSubmittedCount = 0;
   let communityPostsCount = 0;
 
-  allTrackIds.forEach((id) => {
+  activeTrackIds.forEach((id) => {
     const track = getResolvedTrackData(id);
     lecturesRevisedCount += track.lectures.filter((l) => revisedMap[l.id]).length;
     notesBookmarkedCount += track.lectures.filter((l) => bookmarksMap[l.id]).length;
@@ -84,11 +99,15 @@ const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({ session, onNaviga
 
   const handleToggle = (key: keyof Pick<
     SiteControlConfig,
-    'showDemoPreview' | 'allowSelfSignupExplore' | 'communityReadOnly' | 'showCareersInHeader'
+    | 'showDemoPreview'
+    | 'allowSelfSignupExplore'
+    | 'communityReadOnly'
+    | 'showCareersInHeader'
+    | 'enableBatchWhatsAppLinks'
   >) => {
     const next = saveSiteConfig({ [key]: !config[key] });
     setConfig(next);
-    flashNotice('Platform setting updated live');
+    flashNotice('Setting saved');
   };
 
   const handleSaveAnnouncement = (e: React.FormEvent) => {
@@ -96,8 +115,16 @@ const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({ session, onNaviga
     const next = saveSiteConfig({ announcementText: announcementDraft.trim() });
     setConfig(next);
     flashNotice(
-      next.announcementText ? 'Announcement strip published' : 'Announcement strip cleared'
+      next.announcementText ? 'Announcement bar updated' : 'Announcement bar cleared'
     );
+  };
+
+  const openOpsTab = (tab: OperationsTab) => {
+    if (onOpenOperations) {
+      onOpenOperations(tab);
+    } else {
+      onNavigate('admin-operations');
+    }
   };
 
   return (
@@ -112,10 +139,10 @@ const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({ session, onNaviga
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 pb-8 border-b border-brand-dark/10">
           <div>
             <p className="text-xs font-mono uppercase tracking-widest text-brand-accent font-semibold mb-2">
-              Owner Governance &amp; Live Usage Controls
+              Institute Overview &amp; Settings
             </p>
             <h1 className="text-3xl sm:text-5xl font-bold text-brand-dark tracking-tighter">
-              Command Overview.
+              Overview.
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -130,61 +157,97 @@ const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({ session, onNaviga
           </div>
         </div>
 
-        {/* Live Usage Telemetry Strip */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+        {/* 4 Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+          {/* Card 1: Admissions */}
           <div className="bg-[#0A0B0E] text-white rounded-[1.75rem] p-7 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between gap-2 text-xs font-mono text-[#60A5FA] mb-4">
-                <span>ADMISSIONS FUNNEL</span>
+                <span>ADMISSIONS</span>
                 <Users size={15} />
               </div>
-              <div className="text-3xl font-extrabold tracking-tight mb-4">
-                {leads.length} Total Leads
+              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-4">
+                {leads.length} Student Inquiries
               </div>
               <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10 text-xs">
                 <div>
-                  <span className="text-white/45 font-mono block">NEW / COUNSELING</span>
+                  <span className="text-white/45 font-mono block">WAITING</span>
                   <span className="font-bold text-white">
                     {newLeads} New · {counselingLeads} Counseling
                   </span>
                 </div>
                 <div>
-                  <span className="text-white/45 font-mono block">ENROLLED / CREDENTIALS</span>
+                  <span className="text-white/45 font-mono block">JOINED</span>
                   <span className="font-bold text-emerald-400">
-                    {enrolledLeads} Enrolled · {activeProvisioned} Active
+                    {enrolledLeads} Enrolled · {activeProvisioned} Logins
                   </span>
                 </div>
               </div>
             </div>
             <button
               type="button"
-              onClick={() => onNavigate('admin-operations')}
+              onClick={() => openOpsTab('admissions')}
               className="mt-6 text-xs font-bold text-[#60A5FA] hover:text-white inline-flex items-center gap-1.5 transition-colors"
             >
-              Open Admissions Desk <ArrowRight size={13} />
+              Open Admissions <ArrowRight size={13} />
             </button>
           </div>
 
+          {/* Card 2: Active Batches */}
           <div className="bg-white rounded-[1.75rem] border border-brand-dark/10 p-7 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between gap-2 text-xs font-mono text-brand-accent mb-4">
-                <span>LEARNING ACTIVITY</span>
+                <span>ACTIVE BATCHES</span>
                 <Activity size={15} />
               </div>
-              <div className="text-3xl font-extrabold text-brand-dark tracking-tight mb-4">
-                {allTrackIds.length} Active Cohorts
+              <div className="text-2xl sm:text-3xl font-extrabold text-brand-dark tracking-tight mb-4">
+                {activeTrackIds.length} Running Batches
               </div>
               <div className="grid grid-cols-2 gap-3 pt-4 border-t border-brand-dark/10 text-xs">
                 <div>
-                  <span className="text-brand-dark/45 font-mono block">STUDY GUIDES</span>
+                  <span className="text-brand-dark/45 font-mono block">CLASS NOTES</span>
                   <span className="font-bold text-brand-dark">
                     {lecturesRevisedCount} Revised · {notesBookmarkedCount} Saved
                   </span>
                 </div>
                 <div>
-                  <span className="text-brand-dark/45 font-mono block">WORK &amp; Q&amp;A</span>
+                  <span className="text-brand-dark/45 font-mono block">STUDENT WORK</span>
                   <span className="font-bold text-brand-dark">
                     {projectsSubmittedCount} Projects · {communityPostsCount} Posts
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => openOpsTab('batches')}
+              className="mt-6 text-xs font-bold text-brand-dark hover:text-brand-accent inline-flex items-center gap-1.5 transition-colors"
+            >
+              Manage Batches <ArrowRight size={13} />
+            </button>
+          </div>
+
+          {/* Card 3: Team & Access (Dedicated Card) */}
+          <div className="bg-white rounded-[1.75rem] border border-brand-dark/10 p-7 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between gap-2 text-xs font-mono text-brand-accent mb-4">
+                <span>TEAM &amp; ACCESS</span>
+                <KeyRound size={15} />
+              </div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-brand-dark tracking-tight mb-4">
+                {teamMembers.length} Team · {activeProvisioned} Logins
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-brand-dark/10 text-xs">
+                <div>
+                  <span className="text-brand-dark/45 font-mono block">STAFF &amp; MENTORS</span>
+                  <span className="font-bold text-brand-dark">
+                    {mentorCount} Mentors · {staffCount + adminCount} Team
+                  </span>
+                </div>
+                <div>
+                  <span className="text-brand-dark/45 font-mono block">STUDENT LOGINS</span>
+                  <span className="font-bold text-brand-dark">
+                    {activeProvisioned} Active · {revokedProvisioned} Paused
                   </span>
                 </div>
               </div>
@@ -194,27 +257,28 @@ const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({ session, onNaviga
               onClick={() => onNavigate('admin-access')}
               className="mt-6 text-xs font-bold text-brand-dark hover:text-brand-accent inline-flex items-center gap-1.5 transition-colors"
             >
-              Manage Access &amp; Roles <ArrowRight size={13} />
+              Manage Team &amp; Access <ArrowRight size={13} />
             </button>
           </div>
 
+          {/* Card 4: Website & Courses */}
           <div className="bg-white rounded-[1.75rem] border border-brand-dark/10 p-7 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between gap-2 text-xs font-mono text-brand-accent mb-4">
-                <span>CATALOG &amp; FACULTY</span>
+                <span>WEBSITE &amp; COURSES</span>
                 <Shield size={15} />
               </div>
-              <div className="text-3xl font-extrabold text-brand-dark tracking-tight mb-4">
+              <div className="text-2xl sm:text-3xl font-extrabold text-brand-dark tracking-tight mb-4">
                 {visibleCourses.length} Live Courses
               </div>
               <div className="grid grid-cols-2 gap-3 pt-4 border-t border-brand-dark/10 text-xs">
                 <div>
-                  <span className="text-brand-dark/45 font-mono block">FACULTY ROSTER</span>
-                  <span className="font-bold text-brand-dark">{visibleMentors.length} Visible Mentors</span>
+                  <span className="text-brand-dark/45 font-mono block">FACULTY</span>
+                  <span className="font-bold text-brand-dark">{visibleMentors.length} Mentors</span>
                 </div>
                 <div>
-                  <span className="text-brand-dark/45 font-mono block">CREDENTIALS</span>
-                  <span className="font-bold text-brand-dark">{certs.length} Issued Certs</span>
+                  <span className="text-brand-dark/45 font-mono block">CERTIFICATES</span>
+                  <span className="font-bold text-brand-dark">{certs.length} Issued</span>
                 </div>
               </div>
             </div>
@@ -223,81 +287,91 @@ const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({ session, onNaviga
               onClick={() => onNavigate('admin-website')}
               className="mt-6 text-xs font-bold text-brand-dark hover:text-brand-accent inline-flex items-center gap-1.5 transition-colors"
             >
-              Edit Website CMS <ArrowRight size={13} />
+              Edit Website <ArrowRight size={13} />
             </button>
           </div>
         </div>
 
-        {/* Governance & Usage-Based Control Switches */}
-        <div className="mb-6 flex items-center justify-between gap-4">
+        {/* Site & Student Controls */}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Sliders size={18} className="text-brand-accent" />
             <h2 className="text-2xl font-bold text-brand-dark tracking-tight">
-              Feature &amp; Governance Controls
+              Site &amp; Student Controls
             </h2>
           </div>
           <span className="text-xs font-mono text-brand-dark/50">
-            Changes apply immediately across public site &amp; portals
+            Changes go live right away
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
           <ControlToggleCard
-            eyebrow="AUTH SCREEN (/get-started)"
-            title="Public Demo Preview Buttons"
-            description="Show 1-click learner demo track buttons and role autofill hints on the sign-in screen. Turn OFF when launching live to enrolled offline students."
+            eyebrow="SIGN-IN PAGE"
+            title="Show Demo Sign-In Buttons"
+            description="Show quick sample accounts on the sign-in page for walkthroughs. Turn off before sharing with real students."
             enabled={config.showDemoPreview}
-            onLabel="Demo Visible"
-            offLabel="Pure Login Only"
+            onLabel="Shown"
+            offLabel="Hidden"
             onToggle={() => handleToggle('showDemoPreview')}
           />
 
           <ControlToggleCard
-            eyebrow="SIGNUP & ONBOARDING (/dashboard)"
-            title="Allow Self-Signup Track Exploration"
-            description="When ON, self-registered learners can pick a track inside Dashboard to browse study notes. When OFF (Strict Offline Mode), they must claim a staff Batch Code."
+            eyebrow="NEW STUDENT SIGNUPS"
+            title="Let New Signups Browse Courses"
+            description="When on, students who sign up online can browse class notes right away. Turn off to require an admission batch code first."
             enabled={config.allowSelfSignupExplore}
-            onLabel="Explore Allowed"
-            offLabel="Strict Batch Code"
+            onLabel="Open Browsing"
+            offLabel="Batch Code Only"
             onToggle={() => handleToggle('allowSelfSignupExplore')}
           />
 
           <ControlToggleCard
-            eyebrow="BATCH COMMUNITY (/community)"
-            title="Student Community Posting"
-            description="Switch between open student doubt posting/replies vs read-only mode where students view Mentor Announcements and use WhatsApp for doubts."
+            eyebrow="BATCH DISCUSSIONS"
+            title="Allow Student Questions & Replies"
+            description="Let students post doubts and replies online, or switch to read-only so only mentor updates appear."
             enabled={!config.communityReadOnly}
-            onLabel="Open (Post & Reply)"
-            offLabel="Read-Only Mode"
+            onLabel="Students Can Post"
+            offLabel="Read-Only"
             onToggle={() => handleToggle('communityReadOnly')}
           />
 
           <ControlToggleCard
-            eyebrow="PUBLIC NAVIGATION"
-            title="Show Careers Page in Header"
-            description="Toggle visibility of the Careers link in the top public navigation bar based on active placement drives and hiring seasons."
+            eyebrow="TOP MENU"
+            title="Show Careers Link in Menu"
+            description="Show or hide the Careers link in the top navigation bar based on active hiring drives."
             enabled={config.showCareersInHeader}
-            onLabel="Visible in Nav"
-            offLabel="Hidden from Nav"
+            onLabel="Visible"
+            offLabel="Hidden"
             onToggle={() => handleToggle('showCareersInHeader')}
+          />
+
+          <ControlToggleCard
+            eyebrow="MENTOR-STUDENT CHAT"
+            title="Show External Batch WhatsApp Links"
+            description="Keep all student-mentor doubts inside AtoZenius Messages by default, or allow external batch WhatsApp group links."
+            enabled={config.enableBatchWhatsAppLinks}
+            onLabel="WhatsApp Links Shown"
+            offLabel="In-App Only"
+            onToggle={() => handleToggle('enableBatchWhatsAppLinks')}
           />
         </div>
 
-        {/* Site-Wide Announcement Strip Control */}
+        {/* Homepage Announcement Bar */}
         <form
           onSubmit={handleSaveAnnouncement}
           className="bg-white rounded-[1.75rem] border border-brand-dark/10 p-7 sm:p-8"
         >
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <span className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-brand-accent font-semibold">
-              <Megaphone size={14} /> Site-Wide Announcement Strip
+              <Megaphone size={14} /> Homepage Announcement Bar
             </span>
             <span className="text-xs font-mono text-brand-dark/45">
-              Leave blank to hide banner on public pages
+              Leave blank to hide on the website
             </span>
           </div>
           <p className="text-sm text-brand-dark/65 mb-4">
-            Displays a crisp announcement strip below the navbar on public landing pages (e.g., new offline batch start dates).
+            Show a short notice at the top of the home page (for example, upcoming batch start dates).
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <input
@@ -311,7 +385,7 @@ const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({ session, onNaviga
               type="submit"
               className="px-6 py-3 bg-brand-dark text-white rounded-full text-xs font-bold hover:bg-brand-accent transition-colors shrink-0"
             >
-              Update Banner
+              Update Notice
             </button>
             {config.announcementText && (
               <button
@@ -320,7 +394,7 @@ const AdminOverviewPage: React.FC<AdminOverviewPageProps> = ({ session, onNaviga
                   setAnnouncementDraft('');
                   const next = saveSiteConfig({ announcementText: '' });
                   setConfig(next);
-                  flashNotice('Announcement strip cleared');
+                  flashNotice('Announcement bar cleared');
                 }}
                 className="px-5 py-3 border border-brand-dark/15 text-brand-dark/70 rounded-full text-xs font-bold hover:border-brand-dark/40 transition-colors shrink-0"
               >
@@ -375,7 +449,7 @@ const ControlToggleCard: React.FC<ControlToggleCardProps> = ({
 
     <div className="pt-4 border-t border-brand-dark/10 flex items-center justify-between">
       <span className="text-xs font-semibold text-brand-dark/60">
-        Status: <strong className="text-brand-dark">{enabled ? 'Active' : 'Off'}</strong>
+        Currently <strong className="text-brand-dark">{enabled ? 'On' : 'Off'}</strong>
       </span>
       <button
         type="button"

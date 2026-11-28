@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, CheckCircle2, ExternalLink, Send } from 'lucide-react';
+import { Award, CheckCircle2, ExternalLink, MessageCircle, Send } from 'lucide-react';
 import {
   getResolvedTrackData,
   PortalSession,
@@ -13,9 +13,10 @@ import {
 
 interface ProjectsPageProps {
   session: PortalSession;
+  onMessageMentor?: (topicLabel: string) => void;
 }
 
-const ProjectsPage: React.FC<ProjectsPageProps> = ({ session }) => {
+const ProjectsPage: React.FC<ProjectsPageProps> = ({ session, onMessageMentor }) => {
   const track = getResolvedTrackData(session.trackId || 'ai-full-stack');
   const [submissions, setSubmissions] = useState<
     Record<string, ProjectSubmissionRecord>
@@ -216,6 +217,15 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ session }) => {
                         </button>
                       )}
                     </div>
+                  )}
+                  {onMessageMentor && (
+                    <button
+                      type="button"
+                      onClick={() => onMessageMentor(`${proj.number} · ${proj.title}`)}
+                      className="mt-4 text-xs font-semibold text-brand-dark/65 hover:text-brand-accent inline-flex items-center gap-1.5 transition-colors"
+                    >
+                      <MessageCircle size={13} /> Discuss with mentor
+                    </button>
                   )}
                 </div>
               </article>

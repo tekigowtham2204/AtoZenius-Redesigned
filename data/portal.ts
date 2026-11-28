@@ -10,9 +10,20 @@ import { MentorItem, mentorsData } from './mentors';
 import { StudentStory, studentStories } from './stories';
 import { BlogPost, blogPosts } from './blog';
 
-export type PortalTrackId = 'ai-full-stack' | 'advanced-medical-coding' | 'data-science-analytics';
+export type BasePortalTrackId = 'ai-full-stack' | 'advanced-medical-coding' | 'data-science-analytics';
 
-export type PortalRole = 'student' | 'mentor' | 'staff' | 'admin';
+export type PortalTrackId = string;
+
+export type PortalRole = 'student' | 'mentor' | 'staff' | 'manager' | 'admin';
+
+export type TeamPermission =
+  | 'view_overview'
+  | 'manage_admissions'
+  | 'manage_batches'
+  | 'manage_placements'
+  | 'manage_team'
+  | 'edit_website'
+  | 'mentor_workspace';
 
 export interface PortalSession {
   name: string;
@@ -20,6 +31,8 @@ export interface PortalSession {
   initials: string;
   role: PortalRole;
   trackId: PortalTrackId | null;
+  title?: string;
+  permissions?: TeamPermission[];
 }
 
 export type StudentSession = PortalSession;
@@ -72,6 +85,7 @@ export interface CommunityThread {
 
 export interface PortalTrackData {
   id: PortalTrackId;
+  courseId?: string;
   courseTitle: string;
   batchCode: string;
   branchLocation: string;
@@ -88,14 +102,22 @@ export interface PortalTrackData {
   lectures: LectureNote[];
   projects: PortalProject[];
   threads: CommunityThread[];
+  status?: 'active' | 'archived';
 }
 
 export interface BatchOverride {
+  courseId?: string;
+  courseTitle?: string;
+  batchCode?: string;
   branchLocation?: string;
   nextSessionTime?: string;
   nextSessionTopic?: string;
   mentorName?: string;
+  mentorRole?: string;
+  prepChecklist?: string[];
+  whatsappGroupLabel?: string;
   whatsappGroupUrl?: string;
+  status?: 'active' | 'archived';
 }
 
 export interface LectureOverride {
@@ -138,6 +160,7 @@ export interface SiteControlConfig {
   allowSelfSignupExplore: boolean;
   communityReadOnly: boolean;
   showCareersInHeader: boolean;
+  enableBatchWhatsAppLinks: boolean;
   announcementText: string;
   heroTaglinePrefix: string;
   heroSubtitle: string;
@@ -165,8 +188,39 @@ export interface TeamMemberAccess {
   name: string;
   email: string;
   role: Exclude<PortalRole, 'student'>;
+  title?: string;
+  permissions?: TeamPermission[];
   assignedTrackId?: PortalTrackId;
   addedAt: string;
+}
+
+export interface MessengerConversation {
+  id: string;
+  kind: 'direct' | 'batch-channel';
+  trackId: PortalTrackId;
+  batchCode: string;
+  studentEmail: string;
+  studentName: string;
+  mentorName: string;
+  lectureRef?: string;
+  status: 'open' | 'resolved';
+  unreadByStudent: number;
+  unreadByMentor: number;
+  lastMessagePreview: string;
+  lastMessageAt: string;
+  updatedAt: number;
+}
+
+export interface MessengerMessage {
+  id: string;
+  conversationId: string;
+  senderName: string;
+  senderEmail: string;
+  senderRole: PortalRole;
+  body: string;
+  codeSnippet?: string;
+  lectureRef?: string;
+  createdAt: string;
 }
 
 export interface CourseOverride {
@@ -185,13 +239,13 @@ export interface IssuedCertificate {
   issuedDate: string;
 }
 
-export const allTrackIds: PortalTrackId[] = [
+export const allTrackIds: BasePortalTrackId[] = [
   'ai-full-stack',
   'advanced-medical-coding',
   'data-science-analytics',
 ];
 
-export const portalTracks: Record<PortalTrackId, PortalTrackData> = {
+export const portalTracks: Record<BasePortalTrackId, PortalTrackData> = {
   'ai-full-stack': {
     id: 'ai-full-stack',
     courseTitle: 'AI Full-Stack Development',
@@ -842,6 +896,7 @@ export const STORAGE_KEYS = {
   customThreads: 'atozenius_portal_custom_threads_v1',
   customReplies: 'atozenius_portal_custom_replies_v1',
   batchOverrides: 'atozenius_portal_batch_overrides_v1',
+  customBatches: 'atozenius_portal_custom_batches_v1',
   lectureOverrides: 'atozenius_portal_lecture_overrides_v1',
   customLectures: 'atozenius_portal_custom_lectures_v1',
   projectReviews: 'atozenius_portal_project_reviews_v1',
@@ -859,13 +914,22 @@ export const STORAGE_KEYS = {
   storyVisibility: 'atozenius_portal_story_visibility_v1',
   customBlogPosts: 'atozenius_portal_custom_blog_v1',
   blogVisibility: 'atozenius_portal_blog_visibility_v1',
+  messengerConversations: 'atozenius_portal_messenger_conversations_v1',
+  messengerMessages: 'atozenius_portal_messenger_messages_v1',
 };
 
 export const SITE_CONFIG_EVENT = 'atozenius-config-updated';
+export const MESSENGER_UPDATED_EVENT = 'atozenius-messenger-updated';
 
 function emitSiteConfigChange(): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(SITE_CONFIG_EVENT));
+  }
+}
+
+function emitMessengerChange(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(MESSENGER_UPDATED_EVENT));
   }
 }
 
@@ -874,6 +938,7 @@ export const defaultSiteConfig: SiteControlConfig = {
   allowSelfSignupExplore: true,
   communityReadOnly: false,
   showCareersInHeader: true,
+  enableBatchWhatsAppLinks: false,
   announcementText: '',
   heroTaglinePrefix: 'Learn Better. Achieve Faster.',
   heroSubtitle:
@@ -884,12 +949,77 @@ export const defaultSiteConfig: SiteControlConfig = {
   instagramUrl: 'https://www.instagram.com/atozenius',
 };
 
+export const ALL_TEAM_PERMISSIONS: {
+  key: TeamPermission;
+  label: string;
+  description: string;
+}[] = [
+  {
+    key: 'manage_admissions',
+    label: 'Admissions & Walk-Ins',
+    description: 'Add walk-in/WhatsApp students and generate portal logins',
+  },
+  {
+    key: 'manage_batches',
+    label: 'Batches & Classrooms',
+    description: 'Create cohorts, edit timings, rooms, and prep checklists',
+  },
+  {
+    key: 'manage_placements',
+    label: 'Certificates & Hiring',
+    description: 'Issue verifiable certificates and push placement alerts',
+  },
+  {
+    key: 'view_overview',
+    label: 'Overview & Controls',
+    description: 'View institute metrics and toggle site/student controls',
+  },
+  {
+    key: 'manage_team',
+    label: 'Team & Student Logins',
+    description: 'Promote team members, edit permissions, and reset passwords',
+  },
+  {
+    key: 'edit_website',
+    label: 'Edit Website & Courses',
+    description: 'Publish courses, mentors, student stories, and blog posts',
+  },
+  {
+    key: 'mentor_workspace',
+    label: 'Mentor Desk & Messages',
+    description: 'Manage class notes, project reviews, and student messages',
+  },
+];
+
+export function getDefaultPermissionsForRole(
+  role: Exclude<PortalRole, 'student'>
+): TeamPermission[] {
+  if (role === 'admin') {
+    return ALL_TEAM_PERMISSIONS.map((p) => p.key);
+  }
+  if (role === 'manager') {
+    return [
+      'view_overview',
+      'manage_admissions',
+      'manage_batches',
+      'manage_placements',
+      'manage_team',
+    ];
+  }
+  if (role === 'mentor') {
+    return ['mentor_workspace'];
+  }
+  return ['manage_admissions', 'manage_batches', 'manage_placements'];
+}
+
 const defaultTeamAccess: TeamMemberAccess[] = [
   {
     id: 'team-seed-admin',
     name: 'AtoZenius Founder',
     email: 'admin@atozenius.com',
     role: 'admin',
+    title: 'Founder & Owner',
+    permissions: getDefaultPermissionsForRole('admin'),
     assignedTrackId: 'ai-full-stack',
     addedAt: 'System Default',
   },
@@ -898,6 +1028,8 @@ const defaultTeamAccess: TeamMemberAccess[] = [
     name: 'AtoZenius Operations Team',
     email: 'staff@atozenius.com',
     role: 'staff',
+    title: 'Admissions & Ops Counselor',
+    permissions: getDefaultPermissionsForRole('staff'),
     assignedTrackId: 'ai-full-stack',
     addedAt: 'System Default',
   },
@@ -906,6 +1038,8 @@ const defaultTeamAccess: TeamMemberAccess[] = [
     name: 'Turpati Durga Prasad',
     email: 'mentor@atozenius.in',
     role: 'mentor',
+    title: 'Full-Stack & Systems Mentor',
+    permissions: getDefaultPermissionsForRole('mentor'),
     assignedTrackId: 'ai-full-stack',
     addedAt: 'System Default',
   },
@@ -914,6 +1048,8 @@ const defaultTeamAccess: TeamMemberAccess[] = [
     name: 'Sairam Lankadasari',
     email: 'sairam@faculty.atozenius.in',
     role: 'mentor',
+    title: 'Medical Coding Mentor (CPC)',
+    permissions: getDefaultPermissionsForRole('mentor'),
     assignedTrackId: 'advanced-medical-coding',
     addedAt: 'System Default',
   },
@@ -985,6 +1121,8 @@ export function getSavedSession(): PortalSession | null {
     initials: saved.initials || computeInitials(saved.name || 'AtoZenius'),
     role,
     trackId,
+    title: saved.title,
+    permissions: saved.permissions,
   };
 }
 
@@ -1009,7 +1147,37 @@ export function computeInitials(name: string): string {
 
 export function getTeamAccessList(): TeamMemberAccess[] {
   const saved = readStorage<TeamMemberAccess[] | null>(STORAGE_KEYS.teamAccess, null);
-  return saved ?? defaultTeamAccess;
+  const list = saved ?? defaultTeamAccess;
+  return list.map((m) => ({
+    ...m,
+    permissions:
+      m.permissions && m.permissions.length > 0
+        ? m.permissions
+        : getDefaultPermissionsForRole(m.role),
+  }));
+}
+
+export function getEffectivePermissions(session: PortalSession | null): TeamPermission[] {
+  if (!session || session.role === 'student') return [];
+  const liveMember = getTeamAccessList().find(
+    (m) => m.email.trim().toLowerCase() === session.email.trim().toLowerCase()
+  );
+  if (liveMember?.permissions && liveMember.permissions.length > 0) {
+    return liveMember.permissions;
+  }
+  if (session.permissions && session.permissions.length > 0) {
+    return session.permissions;
+  }
+  return getDefaultPermissionsForRole(session.role);
+}
+
+export function hasTeamPermission(
+  session: PortalSession | null,
+  permission: TeamPermission
+): boolean {
+  if (!session) return false;
+  if (session.role === 'admin') return true;
+  return getEffectivePermissions(session).includes(permission);
 }
 
 export function addTeamMemberAccess(
@@ -1022,24 +1190,61 @@ export function addTeamMemberAccess(
   const created: TeamMemberAccess = {
     ...member,
     email: normalizedEmail,
+    permissions:
+      member.permissions && member.permissions.length > 0
+        ? member.permissions
+        : getDefaultPermissionsForRole(member.role),
     id: `team-${Date.now()}`,
     addedAt: 'Just now',
   };
   const next = [created, ...current];
   writeStorage(STORAGE_KEYS.teamAccess, next);
+  emitSiteConfigChange();
+  return next;
+}
+
+export function updateTeamMemberAccess(
+  id: string,
+  patch: Partial<Omit<TeamMemberAccess, 'id' | 'addedAt'>>
+): TeamMemberAccess[] {
+  const next = getTeamAccessList().map((m) => {
+    if (m.id !== id) return m;
+    const nextRole = patch.role ?? m.role;
+    const nextPermissions =
+      patch.permissions && patch.permissions.length > 0
+        ? patch.permissions
+        : patch.role && patch.role !== m.role
+        ? getDefaultPermissionsForRole(nextRole)
+        : m.permissions || getDefaultPermissionsForRole(nextRole);
+    return {
+      ...m,
+      ...patch,
+      role: nextRole,
+      permissions: nextPermissions,
+    };
+  });
+  writeStorage(STORAGE_KEYS.teamAccess, next);
+  emitSiteConfigChange();
   return next;
 }
 
 export function removeTeamMemberAccess(id: string): TeamMemberAccess[] {
   const next = getTeamAccessList().filter((m) => m.id !== id);
   writeStorage(STORAGE_KEYS.teamAccess, next);
+  emitSiteConfigChange();
   return next;
 }
 
 export function detectRoleFromEmail(
   email: string,
   fallbackTrackId: PortalTrackId | null = 'ai-full-stack'
-): { role: PortalRole; trackId: PortalTrackId | null; suggestedName: string } {
+): {
+  role: PortalRole;
+  trackId: PortalTrackId | null;
+  suggestedName: string;
+  title?: string;
+  permissions?: TeamPermission[];
+} {
   const normalized = email.trim().toLowerCase();
   const local = normalized.split('@')[0] || '';
   const domain = normalized.split('@')[1] || '';
@@ -1053,6 +1258,11 @@ export function detectRoleFromEmail(
       role: teamMatch.role,
       trackId: teamMatch.assignedTrackId || fallbackTrackId || 'ai-full-stack',
       suggestedName: teamMatch.name,
+      title: teamMatch.title,
+      permissions:
+        teamMatch.permissions && teamMatch.permissions.length > 0
+          ? teamMatch.permissions
+          : getDefaultPermissionsForRole(teamMatch.role),
     };
   }
 
@@ -1062,10 +1272,23 @@ export function detectRoleFromEmail(
       role: 'admin',
       trackId: fallbackTrackId || 'ai-full-stack',
       suggestedName: 'AtoZenius Founder',
+      title: 'Founder & Owner',
+      permissions: getDefaultPermissionsForRole('admin'),
     };
   }
 
-  // 3. Staff detection: @atozenius.com or staff/ops/admissions/placement prefix
+  // 3. Manager detection
+  if (/^manager/.test(local)) {
+    return {
+      role: 'manager',
+      trackId: fallbackTrackId || 'ai-full-stack',
+      suggestedName: 'Operations Manager',
+      title: 'Center Manager',
+      permissions: getDefaultPermissionsForRole('manager'),
+    };
+  }
+
+  // 4. Staff detection: @atozenius.com or staff/ops/admissions/placement prefix
   if (
     domain === 'atozenius.com' ||
     /^(staff|ops|admissions|placement)/.test(local)
@@ -1074,10 +1297,12 @@ export function detectRoleFromEmail(
       role: 'staff',
       trackId: fallbackTrackId || 'ai-full-stack',
       suggestedName: 'AtoZenius Operations Team',
+      title: 'Admissions & Ops Counselor',
+      permissions: getDefaultPermissionsForRole('staff'),
     };
   }
 
-  // 4. Mentor detection: mentor/faculty prefix or faculty email domain or known mentor names
+  // 5. Mentor detection: mentor/faculty prefix or faculty email domain or known mentor names
   if (
     domain === 'faculty.atozenius.in' ||
     /^(mentor|faculty|sairam|durga|turpati|ananya|aditya)/.test(local)
@@ -1087,6 +1312,8 @@ export function detectRoleFromEmail(
         role: 'mentor',
         trackId: 'advanced-medical-coding',
         suggestedName: 'Sairam Lankadasari',
+        title: 'Medical Coding Mentor (CPC)',
+        permissions: getDefaultPermissionsForRole('mentor'),
       };
     }
     if (local.includes('ananya')) {
@@ -1094,12 +1321,16 @@ export function detectRoleFromEmail(
         role: 'mentor',
         trackId: 'data-science-analytics',
         suggestedName: 'Ananya Deshmukh',
+        title: 'Applied AI & Data Lead',
+        permissions: getDefaultPermissionsForRole('mentor'),
       };
     }
     return {
       role: 'mentor',
       trackId: local.includes('durga') ? 'ai-full-stack' : fallbackTrackId || 'ai-full-stack',
       suggestedName: 'Turpati Durga Prasad',
+      title: 'Full-Stack & Systems Mentor',
+      permissions: getDefaultPermissionsForRole('mentor'),
     };
   }
 
@@ -1116,6 +1347,12 @@ export function detectRoleFromEmail(
 
 export function resolveTrackIdFromProgram(program: string): PortalTrackId {
   const lower = program.toLowerCase();
+  for (const id of getActiveTrackIds()) {
+    const t = getResolvedTrackData(id);
+    if (t.courseTitle.toLowerCase() === lower || lower.includes(t.courseTitle.toLowerCase())) {
+      return id;
+    }
+  }
   if (lower.includes('medical') || lower.includes('pharma') || lower.includes('clinical')) {
     return 'advanced-medical-coding';
   }
@@ -1148,7 +1385,7 @@ export function provisionStudentAccount(params: {
   const normalizedEmail = params.email.trim().toLowerCase();
   const current = getProvisionedStudents();
   const existing = current.find((s) => s.email.trim().toLowerCase() === normalizedEmail);
-  const track = portalTracks[params.trackId];
+  const track = getResolvedTrackData(params.trackId);
 
   if (existing && existing.status === 'Active' && existing.trackId === params.trackId) {
     return existing;
@@ -1189,7 +1426,7 @@ export function updateProvisionedStudentBatch(
   id: string,
   trackId: PortalTrackId
 ): ProvisionedStudent[] {
-  const batchCode = portalTracks[trackId].batchCode;
+  const batchCode = getResolvedTrackData(trackId).batchCode;
   const updated = getProvisionedStudents().map((s) =>
     s.id === id ? { ...s, trackId, batchCode } : s
   );
@@ -1211,9 +1448,9 @@ export function claimBatchByCode(rawCode: string): PortalTrackId | null {
   const cleaned = rawCode.trim().toUpperCase();
   if (!cleaned) return null;
 
-  // Match explicit batch codes like FS-08, MC-14, DS-11
-  for (const id of allTrackIds) {
-    const code = portalTracks[id].batchCode.toUpperCase(); // e.g. BATCH #FS-08
+  // Match explicit batch codes across all active cohorts (including custom/edited batches)
+  for (const id of getActiveTrackIds()) {
+    const code = getResolvedTrackData(id).batchCode.toUpperCase(); // e.g. BATCH #FS-08
     const shortCode = code.replace('BATCH #', '');
     if (cleaned === code || cleaned === shortCode || cleaned === `#${shortCode}`) {
       return id;
@@ -1435,8 +1672,245 @@ export function addCustomBlogPost(post: Omit<BlogPost, 'id'>): BlogPost {
   return created;
 }
 
+export function getCustomBatches(): PortalTrackData[] {
+  return readStorage<PortalTrackData[]>(STORAGE_KEYS.customBatches, []);
+}
+
+export function isCustomCohort(trackId: PortalTrackId): boolean {
+  return getCustomBatches().some((b) => b.id === trackId);
+}
+
+export function getAllTrackIds(includeArchived = false): PortalTrackId[] {
+  const customIds = getCustomBatches().map((b) => b.id);
+  const all = [...allTrackIds, ...customIds];
+  if (includeArchived) return all;
+
+  const batchOverrides = readStorage<Record<string, BatchOverride>>(
+    STORAGE_KEYS.batchOverrides,
+    {}
+  );
+  const customMap = new Map(getCustomBatches().map((b) => [b.id, b]));
+  return all.filter((id) => {
+    const overrideStatus = batchOverrides[id]?.status;
+    const baseStatus = customMap.get(id)?.status || 'active';
+    return (overrideStatus || baseStatus) !== 'archived';
+  });
+}
+
+export function getActiveTrackIds(): PortalTrackId[] {
+  return getAllTrackIds(false);
+}
+
+function buildStarterTrackContentFromCourse(
+  course: CourseItem,
+  mentorName: string,
+  batchCode: string,
+  cohortId: string
+): {
+  nextLectureId: string;
+  prepChecklist: string[];
+  lectures: LectureNote[];
+  projects: PortalProject[];
+  threads: CommunityThread[];
+  whatsappPlacementUrl: string;
+} {
+  if (
+    course.id === 'ai-full-stack' ||
+    course.id === 'advanced-medical-coding' ||
+    course.id === 'data-science-analytics'
+  ) {
+    const t = portalTracks[course.id];
+    return {
+      nextLectureId: t.nextLectureId,
+      prepChecklist: t.prepChecklist,
+      lectures: t.lectures,
+      projects: t.projects,
+      threads: t.threads,
+      whatsappPlacementUrl: t.whatsappPlacementUrl,
+    };
+  }
+
+  const skillsList = course.skills.length > 0 ? course.skills : [course.category];
+  const modules =
+    course.curriculum.length > 0
+      ? course.curriculum
+      : [
+          `${course.title} Foundations`,
+          'Applied Practice & Core Tooling',
+          'Minor Project Lab',
+          'Major Capstone Preparation',
+        ];
+
+  const lectures: LectureNote[] = modules.map((mod, idx) => {
+    const num = String(idx + 1).padStart(2, '0');
+    return {
+      id: `${cohortId}-l${idx + 1}`,
+      lectureNumber: num,
+      weekLabel: `Week ${num}`,
+      title: mod,
+      taughtDate: idx === 0 ? 'Next Class' : `Module ${num}`,
+      status: idx === 0 ? 'upcoming' : 'taught',
+      summary: `${course.description} Focus area: ${mod}.`,
+      classHighlight: `Bring your notes and review ${skillsList.slice(0, 2).join(' & ')} before session ${num}.`,
+      keyPoints: skillsList.slice(0, 3).map((sk) => ({
+        term: sk,
+        detail: `Core practical competency covered inside ${mod}.`,
+      })),
+      referenceSnippetTitle: `${course.title} · Module ${num} Focus`,
+      referenceSnippet: `Course: ${course.title}\nBatch: ${batchCode}\nModule: ${mod}\nSkills: ${skillsList.join(', ')}`,
+    };
+  });
+
+  const projects: PortalProject[] = [
+    ...Array.from({ length: Math.max(1, course.minorProjects) }, (_, i) => ({
+      id: `${cohortId}-m${i + 1}`,
+      kind: 'Minor' as const,
+      number: `Minor 0${i + 1}`,
+      title: `${course.title} Applied Lab 0${i + 1}`,
+      brief: `Practice ${skillsList.slice(0, 3).join(', ')} through a focused mentor-reviewed assignment.`,
+      deliverables: ['Project submission link / report'],
+      defaultStatus: 'Not Started' as const,
+    })),
+    ...Array.from({ length: Math.max(1, course.majorProjects) }, (_, i) => ({
+      id: `${cohortId}-maj${i + 1}`,
+      kind: 'Major' as const,
+      number: `Major 0${i + 1}`,
+      title: `${course.title} Capstone 0${i + 1}`,
+      brief: course.outcomes[0] || `End-to-end capstone evaluation for ${course.title}.`,
+      deliverables: ['Capstone deliverable', 'Mentor review'],
+      defaultStatus: 'Not Started' as const,
+    })),
+  ];
+
+  const digits = getWhatsappDigits();
+  return {
+    nextLectureId: lectures[0]?.id || `${cohortId}-l1`,
+    prepChecklist: [
+      `Review ${modules[0]} overview before walking into class`,
+      `Prepare your workspace for ${skillsList.slice(0, 2).join(' & ')} exercises`,
+      `Track ${course.minorProjects} Minor & ${course.majorProjects} Major milestones in Projects`,
+    ],
+    lectures,
+    projects,
+    threads: [
+      {
+        id: `${cohortId}-t1`,
+        category: 'Mentor Pinned',
+        lectureRef: `Lecture 01 · ${modules[0]}`,
+        author: mentorName,
+        authorInitials: computeInitials(mentorName),
+        timeAgo: 'Just now',
+        pinned: true,
+        title: `Welcome to ${batchCode} — ${course.title}`,
+        body: `Welcome to your offline companion workspace! Check the prep checklist before your first session and post any topic doubts here.`,
+        replies: [],
+      },
+    ],
+    whatsappPlacementUrl: `https://wa.me/${digits}?text=${encodeURIComponent(
+      `Hi, please add me to the ${course.title} Placement Alerts WhatsApp broadcast.`
+    )}`,
+  };
+}
+
+export function createCustomCohort(params: {
+  courseId: string;
+  batchCode: string;
+  branchLocation: string;
+  nextSessionTime: string;
+  nextSessionTopic: string;
+  mentorName: string;
+  mentorRole: string;
+  whatsappGroupUrl?: string;
+  prepChecklist?: string[];
+}): PortalTrackData {
+  const course =
+    getAllAdminCourses().find((c) => c.id === params.courseId) ||
+    getAllAdminCourses()[0];
+  const id = `cohort-${Date.now()}`;
+  const digits = getWhatsappDigits();
+  const formattedCode = params.batchCode.trim().startsWith('Batch')
+    ? params.batchCode.trim()
+    : `Batch #${params.batchCode.trim().replace(/^#/, '')}`;
+  const starter = buildStarterTrackContentFromCourse(
+    course,
+    params.mentorName.trim(),
+    formattedCode,
+    id
+  );
+
+  const created: PortalTrackData = {
+    id,
+    courseId: course.id,
+    courseTitle: course.title,
+    batchCode: formattedCode,
+    branchLocation: params.branchLocation.trim(),
+    nextSessionTime: params.nextSessionTime.trim(),
+    nextSessionTopic: params.nextSessionTopic.trim(),
+    nextLectureId: starter.nextLectureId,
+    mentorName: params.mentorName.trim(),
+    mentorRole: params.mentorRole.trim() || `${course.category} Mentor`,
+    prepChecklist:
+      params.prepChecklist && params.prepChecklist.length > 0
+        ? params.prepChecklist
+        : starter.prepChecklist,
+    whatsappGroupLabel: `${formattedCode.replace('Batch #', '')} Official Batch Group`,
+    whatsappGroupUrl:
+      params.whatsappGroupUrl?.trim() ||
+      `https://wa.me/${digits}?text=${encodeURIComponent(
+        `Hi, I am in ${formattedCode} (${course.title}) and want to join the official batch WhatsApp group.`
+      )}`,
+    whatsappDoubtUrl: `https://wa.me/${digits}?text=${encodeURIComponent(
+      `Hi ${params.mentorName.trim()}, I have a doubt from ${formattedCode}.`
+    )}`,
+    whatsappPlacementUrl: starter.whatsappPlacementUrl,
+    lectures: starter.lectures,
+    projects: starter.projects,
+    threads: starter.threads,
+    status: 'active',
+  };
+
+  const current = getCustomBatches();
+  writeStorage(STORAGE_KEYS.customBatches, [...current, created]);
+  emitSiteConfigChange();
+  return created;
+}
+
+export function getCohortsForCourse(courseId: string): PortalTrackData[] {
+  return getActiveTrackIds()
+    .map((id) => getResolvedTrackData(id))
+    .filter((track) => (track.courseId || track.id) === courseId);
+}
+
+export function saveBatchOverride(trackId: PortalTrackId, patch: BatchOverride): void {
+  const existing = readStorage<Record<string, BatchOverride>>(
+    STORAGE_KEYS.batchOverrides,
+    {}
+  );
+  writeStorage(STORAGE_KEYS.batchOverrides, {
+    ...existing,
+    [trackId]: { ...(existing[trackId] || {}), ...patch },
+  });
+  emitSiteConfigChange();
+}
+
+export function toggleBatchStatus(trackId: PortalTrackId): 'active' | 'archived' {
+  const resolved = getResolvedTrackData(trackId);
+  const nextStatus = resolved.status === 'archived' ? 'active' : 'archived';
+  saveBatchOverride(trackId, { status: nextStatus });
+  return nextStatus;
+}
+
+export function deleteCustomCohort(trackId: PortalTrackId): void {
+  const remaining = getCustomBatches().filter((b) => b.id !== trackId);
+  writeStorage(STORAGE_KEYS.customBatches, remaining);
+  emitSiteConfigChange();
+}
+
 export function getResolvedTrackData(trackId: PortalTrackId): PortalTrackData {
-  const base = portalTracks[trackId];
+  const base =
+    (portalTracks as Record<string, PortalTrackData>)[trackId] ||
+    getCustomBatches().find((b) => b.id === trackId) ||
+    portalTracks['ai-full-stack'];
   const batchOverrides = readStorage<Record<string, BatchOverride>>(
     STORAGE_KEYS.batchOverrides,
     {}
@@ -1459,6 +1933,9 @@ export function getResolvedTrackData(trackId: PortalTrackId): PortalTrackData {
   );
 
   const bOverride = batchOverrides[trackId] || {};
+  const resolvedCourseId = bOverride.courseId || base.courseId || base.id;
+  const linkedCourse = getAllAdminCourses().find((c) => c.id === resolvedCourseId);
+
   const mergedLectures = [
     ...base.lectures.map((lec) => ({
       ...lec,
@@ -1481,6 +1958,9 @@ export function getResolvedTrackData(trackId: PortalTrackId): PortalTrackData {
   return {
     ...base,
     ...bOverride,
+    courseId: resolvedCourseId,
+    courseTitle: bOverride.courseTitle || linkedCourse?.title || base.courseTitle,
+    status: bOverride.status || base.status || 'active',
     lectures: mergedLectures,
     threads: mergedThreads,
   };
@@ -1563,4 +2043,417 @@ export function issueNewCertificate(
 export function verifyCertificateById(id: string): IssuedCertificate | undefined {
   const cleaned = id.trim().toUpperCase();
   return getIssuedCertificates().find((c) => c.id.toUpperCase() === cleaned);
+}
+
+// --- Dedicated AtoZenius Messenger (Mentor <-> Student without Personal WhatsApp) ---
+
+const defaultMessengerConversations: MessengerConversation[] = [
+  {
+    id: 'conv-dm-fs08-kalyan',
+    kind: 'direct',
+    trackId: 'ai-full-stack',
+    batchCode: 'Batch #FS-08',
+    studentEmail: 'kalyan.karadi@atozenius.in',
+    studentName: 'Kalyan Karadi',
+    mentorName: 'Turpati Durga Prasad',
+    lectureRef: 'Lecture 04 · Streaming LLM Responses & Structured JSON Validation',
+    status: 'open',
+    unreadByStudent: 1,
+    unreadByMentor: 0,
+    lastMessagePreview: 'Use AbortController in Express so closed tabs stop streaming cleanly.',
+    lastMessageAt: '25m ago',
+    updatedAt: 1795850000000,
+  },
+  {
+    id: 'conv-channel-fs08',
+    kind: 'batch-channel',
+    trackId: 'ai-full-stack',
+    batchCode: 'Batch #FS-08',
+    studentEmail: '',
+    studentName: 'Batch #FS-08 Classroom',
+    mentorName: 'Turpati Durga Prasad',
+    status: 'open',
+    unreadByStudent: 0,
+    unreadByMentor: 0,
+    lastMessagePreview: 'Tomorrow 10 AM Room 204 — bring Node 20+ and PostgreSQL running.',
+    lastMessageAt: '2h ago',
+    updatedAt: 1795840000000,
+  },
+  {
+    id: 'conv-dm-mc14-mukul',
+    kind: 'direct',
+    trackId: 'advanced-medical-coding',
+    batchCode: 'Batch #MC-14',
+    studentEmail: 'mukul.chowdary@atozenius.in',
+    studentName: 'Mukul Chowdary',
+    mentorName: 'Sairam Lankadasari',
+    lectureRef: 'Lecture 04 · CPT Modifiers (-25, -59, -76)',
+    status: 'open',
+    unreadByStudent: 1,
+    unreadByMentor: 0,
+    lastMessagePreview: 'Attach Modifier -25 to the E/M code only when separate MDM is documented.',
+    lastMessageAt: '1h ago',
+    updatedAt: 1795845000000,
+  },
+  {
+    id: 'conv-channel-mc14',
+    kind: 'batch-channel',
+    trackId: 'advanced-medical-coding',
+    batchCode: 'Batch #MC-14',
+    studentEmail: '',
+    studentName: 'Batch #MC-14 Classroom',
+    mentorName: 'Sairam Lankadasari',
+    status: 'open',
+    unreadByStudent: 0,
+    unreadByMentor: 0,
+    lastMessagePreview: 'Bring CPT Appendix A tabs to Ameerpet Lab 3 tomorrow at 11 AM.',
+    lastMessageAt: '3h ago',
+    updatedAt: 1795835000000,
+  },
+  {
+    id: 'conv-dm-ds11-siva',
+    kind: 'direct',
+    trackId: 'data-science-analytics',
+    batchCode: 'Batch #DS-11',
+    studentEmail: 'siva.yarra@atozenius.in',
+    studentName: 'Siva Yarra',
+    mentorName: 'Ananya Deshmukh',
+    lectureRef: 'Lecture 04 · DAX Measures & Executive Power BI Storytelling',
+    status: 'open',
+    unreadByStudent: 0,
+    unreadByMentor: 1,
+    lastMessagePreview: 'My YoY measure returns blank on January rows—should I use SAMEPERIODLASTYEAR?',
+    lastMessageAt: '40m ago',
+    updatedAt: 1795848000000,
+  },
+  {
+    id: 'conv-channel-ds11',
+    kind: 'batch-channel',
+    trackId: 'data-science-analytics',
+    batchCode: 'Batch #DS-11',
+    studentEmail: '',
+    studentName: 'Batch #DS-11 Classroom',
+    mentorName: 'Ananya Deshmukh',
+    status: 'open',
+    unreadByStudent: 0,
+    unreadByMentor: 0,
+    lastMessagePreview: 'Retail star-schema CSV pack is ready for tomorrow Room 102.',
+    lastMessageAt: '4h ago',
+    updatedAt: 1795830000000,
+  },
+];
+
+const defaultMessengerMessages: Record<string, MessengerMessage[]> = {
+  'conv-dm-fs08-kalyan': [
+    {
+      id: 'msg-seed-1',
+      conversationId: 'conv-dm-fs08-kalyan',
+      senderName: 'Kalyan Karadi',
+      senderEmail: 'kalyan.karadi@atozenius.in',
+      senderRole: 'student',
+      lectureRef: 'Lecture 04 · Streaming LLM Responses & Structured JSON Validation',
+      body: 'Hi Sir, when a student closes the browser tab mid-stream, my Express route keeps running the LLM request. How do I stop it cleanly?',
+      createdAt: 'Today · 11:40 AM',
+    },
+    {
+      id: 'msg-seed-2',
+      conversationId: 'conv-dm-fs08-kalyan',
+      senderName: 'Turpati Durga Prasad',
+      senderEmail: 'mentor@atozenius.in',
+      senderRole: 'mentor',
+      body: 'Use AbortController in Express so closed tabs stop streaming cleanly. Hook it onto req.on("close") and pass signal to fetch.',
+      codeSnippet: `const controller = new AbortController();\nreq.on('close', () => controller.abort());`,
+      createdAt: 'Today · 11:55 AM',
+    },
+  ],
+  'conv-channel-fs08': [
+    {
+      id: 'msg-seed-3',
+      conversationId: 'conv-channel-fs08',
+      senderName: 'Turpati Durga Prasad',
+      senderEmail: 'mentor@atozenius.in',
+      senderRole: 'mentor',
+      body: 'Tomorrow 10 AM Room 204 — bring Node 20+ and PostgreSQL running. We will walk through SSE streaming end-to-end.',
+      createdAt: 'Today · 10:15 AM',
+    },
+  ],
+  'conv-dm-mc14-mukul': [
+    {
+      id: 'msg-seed-4',
+      conversationId: 'conv-dm-mc14-mukul',
+      senderName: 'Mukul Chowdary',
+      senderEmail: 'mukul.chowdary@atozenius.in',
+      senderRole: 'student',
+      lectureRef: 'Lecture 04 · CPT Modifiers (-25, -59, -76)',
+      body: 'Sir, on outpatient Chart #6 the doctor did an ear lavage and also evaluated a new sinus infection. Does -25 go on the procedure or the E/M?',
+      createdAt: 'Today · 10:50 AM',
+    },
+    {
+      id: 'msg-seed-5',
+      conversationId: 'conv-dm-mc14-mukul',
+      senderName: 'Sairam Lankadasari',
+      senderEmail: 'sairam@faculty.atozenius.in',
+      senderRole: 'mentor',
+      body: 'Attach Modifier -25 to the E/M code only when separate MDM is documented. Never put -25 on the procedure code.',
+      createdAt: 'Today · 11:10 AM',
+    },
+  ],
+  'conv-channel-mc14': [
+    {
+      id: 'msg-seed-6',
+      conversationId: 'conv-channel-mc14',
+      senderName: 'Sairam Lankadasari',
+      senderEmail: 'sairam@faculty.atozenius.in',
+      senderRole: 'mentor',
+      body: 'Bring CPT Appendix A tabs to Ameerpet Lab 3 tomorrow at 11 AM. We will audit 8 surgical charts together.',
+      createdAt: 'Today · 9:30 AM',
+    },
+  ],
+  'conv-dm-ds11-siva': [
+    {
+      id: 'msg-seed-7',
+      conversationId: 'conv-dm-ds11-siva',
+      senderName: 'Siva Yarra',
+      senderEmail: 'siva.yarra@atozenius.in',
+      senderRole: 'student',
+      lectureRef: 'Lecture 04 · DAX Measures & Executive Power BI Storytelling',
+      body: 'My YoY measure returns blank on January rows—should I use SAMEPERIODLASTYEAR with a marked Date table?',
+      codeSnippet: `Revenue YoY % =\nVAR PrevYear = CALCULATE([Total Revenue], SAMEPERIODLASTYEAR('Date'[Date]))\nRETURN DIVIDE([Total Revenue] - PrevYear, PrevYear)`,
+      createdAt: 'Today · 11:30 AM',
+    },
+  ],
+  'conv-channel-ds11': [
+    {
+      id: 'msg-seed-8',
+      conversationId: 'conv-channel-ds11',
+      senderName: 'Ananya Deshmukh',
+      senderEmail: 'ananya@faculty.atozenius.in',
+      senderRole: 'mentor',
+      body: 'Retail star-schema CSV pack is ready for tomorrow Room 102 at 2:00 PM.',
+      createdAt: 'Today · 8:45 AM',
+    },
+  ],
+};
+
+function getAllMessengerConversations(): MessengerConversation[] {
+  const saved = readStorage<MessengerConversation[] | null>(
+    STORAGE_KEYS.messengerConversations,
+    null
+  );
+  return saved ?? defaultMessengerConversations;
+}
+
+function getAllMessengerMessagesMap(): Record<string, MessengerMessage[]> {
+  const saved = readStorage<Record<string, MessengerMessage[]> | null>(
+    STORAGE_KEYS.messengerMessages,
+    null
+  );
+  return saved ?? defaultMessengerMessages;
+}
+
+export function getMessengerMessages(conversationId: string): MessengerMessage[] {
+  const map = getAllMessengerMessagesMap();
+  return map[conversationId] || [];
+}
+
+export function ensureBatchChannelConversation(trackId: PortalTrackId): MessengerConversation {
+  const all = getAllMessengerConversations();
+  const existing = all.find((c) => c.kind === 'batch-channel' && c.trackId === trackId);
+  if (existing) return existing;
+
+  const track = getResolvedTrackData(trackId);
+  const created: MessengerConversation = {
+    id: `conv-channel-${trackId}`,
+    kind: 'batch-channel',
+    trackId,
+    batchCode: track.batchCode,
+    studentEmail: '',
+    studentName: `${track.batchCode} Classroom`,
+    mentorName: track.mentorName,
+    status: 'open',
+    unreadByStudent: 0,
+    unreadByMentor: 0,
+    lastMessagePreview: `Welcome to the ${track.batchCode} classroom channel with ${track.mentorName}.`,
+    lastMessageAt: 'Just now',
+    updatedAt: Date.now(),
+  };
+
+  writeStorage(STORAGE_KEYS.messengerConversations, [created, ...all]);
+  const msgMap = getAllMessengerMessagesMap();
+  writeStorage(STORAGE_KEYS.messengerMessages, {
+    ...msgMap,
+    [created.id]: [
+      {
+        id: `msg-${Date.now()}`,
+        conversationId: created.id,
+        senderName: track.mentorName,
+        senderEmail: 'mentor@atozenius.in',
+        senderRole: 'mentor',
+        body: `Welcome to ${track.batchCode}! Use this channel for class announcements and private direct chats for 1-on-1 doubts.`,
+        createdAt: 'Just now',
+      },
+    ],
+  });
+  return created;
+}
+
+export function getConversationsForSession(session: PortalSession): MessengerConversation[] {
+  const activeIds = getActiveTrackIds();
+  if (session.role === 'student') {
+    const trackId = session.trackId || activeIds[0] || 'ai-full-stack';
+    ensureBatchChannelConversation(trackId);
+    const all = getAllMessengerConversations();
+    const emailLower = session.email.trim().toLowerCase();
+    return all
+      .filter(
+        (c) =>
+          (c.kind === 'batch-channel' && c.trackId === trackId) ||
+          (c.kind === 'direct' && c.studentEmail.toLowerCase() === emailLower)
+      )
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  // Mentor / Admin / Staff view: show all batch channels and student direct threads
+  activeIds.forEach((id) => ensureBatchChannelConversation(id));
+  return getAllMessengerConversations().sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export function getOrCreateDirectConversation(
+  session: PortalSession,
+  trackId: PortalTrackId,
+  lectureRef?: string
+): MessengerConversation {
+  const emailLower = session.email.trim().toLowerCase();
+  const all = getAllMessengerConversations();
+  const existing = all.find(
+    (c) =>
+      c.kind === 'direct' &&
+      c.trackId === trackId &&
+      c.studentEmail.toLowerCase() === emailLower
+  );
+
+  if (existing) {
+    if (lectureRef && existing.lectureRef !== lectureRef) {
+      const updated = all.map((c) =>
+        c.id === existing.id ? { ...c, lectureRef } : c
+      );
+      writeStorage(STORAGE_KEYS.messengerConversations, updated);
+      emitMessengerChange();
+      return { ...existing, lectureRef };
+    }
+    return existing;
+  }
+
+  const track = getResolvedTrackData(trackId);
+  const created: MessengerConversation = {
+    id: `conv-dm-${trackId}-${Date.now()}`,
+    kind: 'direct',
+    trackId,
+    batchCode: track.batchCode,
+    studentEmail: emailLower,
+    studentName: session.name,
+    mentorName: track.mentorName,
+    lectureRef,
+    status: 'open',
+    unreadByStudent: 0,
+    unreadByMentor: 0,
+    lastMessagePreview: `Direct conversation with ${track.mentorName}`,
+    lastMessageAt: 'New',
+    updatedAt: Date.now(),
+  };
+
+  writeStorage(STORAGE_KEYS.messengerConversations, [created, ...all]);
+  emitMessengerChange();
+  return created;
+}
+
+export function sendMessengerMessage(params: {
+  conversationId: string;
+  session: PortalSession;
+  body: string;
+  codeSnippet?: string;
+  lectureRef?: string;
+}): MessengerMessage {
+  const { conversationId, session, body, codeSnippet, lectureRef } = params;
+  const nowLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const msg: MessengerMessage = {
+    id: `msg-${Date.now()}`,
+    conversationId,
+    senderName: session.name,
+    senderEmail: session.email,
+    senderRole: session.role,
+    body: body.trim(),
+    codeSnippet: codeSnippet?.trim() || undefined,
+    lectureRef: lectureRef?.trim() || undefined,
+    createdAt: `Today · ${nowLabel}`,
+  };
+
+  const msgMap = getAllMessengerMessagesMap();
+  writeStorage(STORAGE_KEYS.messengerMessages, {
+    ...msgMap,
+    [conversationId]: [...(msgMap[conversationId] || []), msg],
+  });
+
+  const isStudent = session.role === 'student';
+  const conversations = getAllMessengerConversations().map((c) => {
+    if (c.id !== conversationId) return c;
+    return {
+      ...c,
+      lectureRef: lectureRef?.trim() || c.lectureRef,
+      status: 'open' as const,
+      lastMessagePreview: body.trim(),
+      lastMessageAt: 'Just now',
+      updatedAt: Date.now(),
+      unreadByStudent: isStudent ? 0 : c.unreadByStudent + 1,
+      unreadByMentor: isStudent ? c.unreadByMentor + 1 : 0,
+    };
+  });
+  writeStorage(STORAGE_KEYS.messengerConversations, conversations);
+  emitMessengerChange();
+  return msg;
+}
+
+export function markConversationRead(
+  conversationId: string,
+  role: PortalRole
+): void {
+  const isStudent = role === 'student';
+  const conversations = getAllMessengerConversations();
+  const target = conversations.find((c) => c.id === conversationId);
+  if (!target) return;
+  if (isStudent && target.unreadByStudent === 0) return;
+  if (!isStudent && target.unreadByMentor === 0) return;
+
+  const updated = conversations.map((c) =>
+    c.id === conversationId
+      ? {
+          ...c,
+          unreadByStudent: isStudent ? 0 : c.unreadByStudent,
+          unreadByMentor: isStudent ? c.unreadByMentor : 0,
+        }
+      : c
+  );
+  writeStorage(STORAGE_KEYS.messengerConversations, updated);
+  emitMessengerChange();
+}
+
+export function toggleConversationStatus(conversationId: string): MessengerConversation[] {
+  const updated = getAllMessengerConversations().map((c) =>
+    c.id === conversationId
+      ? { ...c, status: (c.status === 'open' ? 'resolved' : 'open') as 'open' | 'resolved' }
+      : c
+  );
+  writeStorage(STORAGE_KEYS.messengerConversations, updated);
+  emitMessengerChange();
+  return updated;
+}
+
+export function getTotalUnreadCount(session: PortalSession | null): number {
+  if (!session) return 0;
+  if (session.role !== 'student' && session.role !== 'mentor') return 0;
+  const list = getConversationsForSession(session);
+  return list.reduce(
+    (sum, c) => sum + (session.role === 'student' ? c.unreadByStudent : c.unreadByMentor),
+    0
+  );
 }

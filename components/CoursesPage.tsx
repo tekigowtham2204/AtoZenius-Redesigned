@@ -9,7 +9,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { courseCategories, CourseCategory, CourseItem } from '../data/courses';
-import { getResolvedCourses, getWhatsappDigits } from '../data/portal';
+import { getCohortsForCourse, getResolvedCourses, getWhatsappDigits } from '../data/portal';
 
 interface CoursesPageProps {
   onOpenAuth: () => void;
@@ -133,6 +133,7 @@ const CoursesPage: React.FC<CoursesPageProps> = ({ onOpenAuth }) => {
               const theme = categoryThemes[course.category];
               const isDark = Boolean(theme.darkHeader);
               const isEnrolled = enrolledIds.includes(course.id);
+              const activeCohorts = getCohortsForCourse(course.id);
 
               return (
                 <motion.article
@@ -231,6 +232,16 @@ const CoursesPage: React.FC<CoursesPageProps> = ({ onOpenAuth }) => {
                           </span>
                           <span className="text-xs font-medium text-brand-dark/75 text-right leading-snug">
                             {course.skills.slice(0, 4).join(' · ')}
+                          </span>
+                        </div>
+                        <div className="py-3 flex items-baseline justify-between gap-4">
+                          <span className="text-[11px] font-mono uppercase tracking-wider text-brand-dark/45 shrink-0">
+                            Cohorts
+                          </span>
+                          <span className="text-xs font-semibold text-brand-accent text-right leading-snug">
+                            {activeCohorts.length > 0
+                              ? activeCohorts.map((b) => b.batchCode).join(' · ')
+                              : 'New Batch Forming'}
                           </span>
                         </div>
                       </div>
@@ -339,7 +350,7 @@ const CoursesPage: React.FC<CoursesPageProps> = ({ onOpenAuth }) => {
                 </ol>
               </div>
 
-              <div className="bg-white rounded-2xl p-6 border border-brand-dark/5 mb-8">
+              <div className="bg-white rounded-2xl p-6 border border-brand-dark/5 mb-6">
                 <div className="text-xs font-bold uppercase tracking-widest text-brand-dark/50 mb-3">
                   Projects &amp; Outcomes ({activeCourse.minorProjects} Minor + {activeCourse.majorProjects} Major)
                 </div>
@@ -352,6 +363,25 @@ const CoursesPage: React.FC<CoursesPageProps> = ({ onOpenAuth }) => {
                   ))}
                 </ul>
               </div>
+
+              {getCohortsForCourse(activeCourse.id).length > 0 && (
+                <div className="bg-[#0A0B0E] text-white rounded-2xl p-5 mb-8 space-y-2.5">
+                  <div className="text-[11px] font-mono uppercase tracking-wider text-[#60A5FA]">
+                    Active Offline Cohorts
+                  </div>
+                  {getCohortsForCourse(activeCourse.id).map((b) => (
+                    <div
+                      key={b.id}
+                      className="flex flex-wrap items-center justify-between gap-2 text-xs pt-2 border-t border-white/10 first:border-t-0 first:pt-0"
+                    >
+                      <span className="font-bold">
+                        {b.batchCode} · {b.branchLocation}
+                      </span>
+                      <span className="font-mono text-white/65">{b.nextSessionTime}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <button

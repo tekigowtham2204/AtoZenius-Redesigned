@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   MessageCircle,
+  Lock,
   Pin,
   Search,
   Send,
   ShieldCheck,
   ArrowUpRight,
+  Users,
 } from 'lucide-react';
 import {
   computeInitials,
@@ -20,11 +22,16 @@ import {
 interface CommunityPageProps {
   session: PortalSession;
   prefillLecture?: string | null;
+  onOpenMessages?: () => void;
 }
 
 const filters = ['All', 'Course Doubts', 'Mentor Pinned', 'Placement Alerts'] as const;
 
-const CommunityPage: React.FC<CommunityPageProps> = ({ session, prefillLecture }) => {
+const CommunityPage: React.FC<CommunityPageProps> = ({
+  session,
+  prefillLecture,
+  onOpenMessages,
+}) => {
   const [, setRefreshTick] = useState(0);
   const siteConfig = getSiteConfig();
   const track = getResolvedTrackData(session.trackId || 'ai-full-stack');
@@ -303,58 +310,66 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ session, prefillLecture }
             </div>
           </div>
 
-          {/* Right WhatsApp Bridge Panel */}
+          {/* Right AtoZenius Messenger Bridge Panel (Replaces Personal WhatsApp) */}
           <aside className="lg:col-span-4 space-y-5">
             <div className="bg-[#0A0B0E] text-white rounded-[1.75rem] p-7">
-              <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 mb-3">
-                <MessageCircle size={15} /> WhatsApp Channels
+              <div className="flex items-center gap-2 text-xs font-mono text-[#60A5FA] mb-3">
+                <Lock size={14} /> AtoZenius Direct Messenger
               </div>
               <h2 className="text-xl font-bold tracking-tight mb-2">
-                Instant Alerts &amp; Mentor Ping
+                Message Your Mentor Privately
               </h2>
               <p className="text-xs text-white/65 leading-relaxed mb-6">
-                Use WhatsApp for classroom timing updates and urgent help, while keeping lecture notes &amp; solved doubts archived here.
+                Connect 1-on-1 with {track.mentorName} or open your classroom channel directly inside AtoZenius—no phone numbers needed.
               </p>
 
               <div className="space-y-3">
-                <a
-                  href={track.whatsappGroupUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => onOpenMessages && onOpenMessages()}
+                  className="w-full text-left block p-4 rounded-2xl bg-brand-accent hover:bg-brand-accent/90 transition-colors"
                 >
                   <div className="flex items-center justify-between text-xs font-bold text-white mb-0.5">
-                    <span>{track.whatsappGroupLabel}</span>
-                    <ArrowUpRight size={14} className="text-emerald-400" />
+                    <span className="inline-flex items-center gap-1.5">
+                      <MessageCircle size={14} /> Message {track.mentorName.split(' ')[0]} Privately
+                    </span>
+                    <ArrowUpRight size={14} className="text-white" />
                   </div>
-                  <p className="text-[11px] text-white/55">Daily room updates &amp; cohort reminders</p>
-                </a>
+                  <p className="text-[11px] text-white/80">
+                    Private 1-on-1 doubts &amp; code/chart snippets
+                  </p>
+                </button>
 
-                <a
-                  href={track.whatsappDoubtUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => onOpenMessages && onOpenMessages()}
+                  className="w-full text-left block p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
                 >
                   <div className="flex items-center justify-between text-xs font-bold text-white mb-0.5">
-                    <span>Ping Mentor ({track.mentorName.split(' ')[0]})</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Users size={14} className="text-[#60A5FA]" /> {track.batchCode} Classroom Channel
+                    </span>
                     <ArrowUpRight size={14} className="text-[#60A5FA]" />
                   </div>
-                  <p className="text-[11px] text-white/55">Fast 1-on-1 doubt check via +91 9502886626</p>
-                </a>
+                  <p className="text-[11px] text-white/55">
+                    Room reminders &amp; mentor class updates
+                  </p>
+                </button>
 
-                <a
-                  href={track.whatsappPlacementUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
-                >
-                  <div className="flex items-center justify-between text-xs font-bold text-white mb-0.5">
-                    <span>Placement Broadcast</span>
-                    <ArrowUpRight size={14} className="text-amber-400" />
-                  </div>
-                  <p className="text-[11px] text-white/55">Hiring drives &amp; mock interview slots</p>
-                </a>
+                {siteConfig.enableBatchWhatsAppLinks && (
+                  <a
+                    href={track.whatsappGroupUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                  >
+                    <div className="flex items-center justify-between text-xs font-bold text-white mb-0.5">
+                      <span>{track.whatsappGroupLabel}</span>
+                      <ArrowUpRight size={14} className="text-emerald-400" />
+                    </div>
+                    <p className="text-[11px] text-white/55">External batch announcement group</p>
+                  </a>
+                )}
               </div>
             </div>
           </aside>
